@@ -20,7 +20,6 @@ class BoothController extends Controller
 
     /**
      * Step 2: Capture Session Page
-     * User must have selected a layout first (validated client-side via localStorage)
      */
     public function capture()
     {
@@ -28,7 +27,15 @@ class BoothController extends Controller
     }
 
     /**
-     * Legacy index - redirects to capture
+     * Step 3: Customize & Review Page (The Darkroom)
+     */
+    public function customize()
+    {
+        return Inertia::render('Booth/Customize');
+    }
+
+    /**
+     * Legacy index - redirects to select
      */
     public function index()
     {
@@ -36,38 +43,66 @@ class BoothController extends Controller
     }
 
     /**
-     * Store captured photo
+     * Store individual captured photo (legacy)
      */
     public function store(Request $request)
     {
-        // Validate dữ liệu gửi lên
         $request->validate([
             'image' => 'required|string',
         ]);
 
-        // 1. Lấy dữ liệu ảnh (đang dạng base64: "data:image/png;base64,RxRkx...")
         $image_64 = $request->image;
-
-        // 2. Tách phần header ra để lấy nội dung ảnh thuần
-        $extension = explode('/', explode(':', substr($image_64, 0, strpos($image_64, ';')))[1])[1];   // .png
+        $extension = explode('/', explode(':', substr($image_64, 0, strpos($image_64, ';')))[1])[1];
         $replace = substr($image_64, 0, strpos($image_64, ',') + 1);
         $image = str_replace($replace, '', $image_64);
         $image = str_replace(' ', '+', $image);
 
-        // 3. Đặt tên file ngẫu nhiên (để không trùng)
         $imageName = Str::random(10) . '.' . $extension;
-
-        // 4. Lưu vào ổ cứng (thư mục storage/app/public/photos)
         Storage::disk('public')->put('photos/' . $imageName, base64_decode($image));
 
-        // 5. Lưu đường dẫn vào Database
         Photo::create([
             'user_id' => auth()->id(),
             'path' => 'photos/' . $imageName,
         ]);
 
-        // 6. Trả về thông báo thành công cho React
-        return redirect()->back()->with('message', 'Photo saved to your album!');
+        return redirect()->back()->with('message', 'Photo saved!');
+    }
+
+    /**
+     * Export final strip to gallery
+     */
+    public function export(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|string',
+        ]);
+
+        $image_64 = $request->image;
+
+        // Extract extension from data URL
+        preg_match('/data:image\/(\w+);base64,/', $image_64, $matches);
+        $extension = $matches[1] ?? 'png';
+
+        // Remove data URL prefix
+        $image = preg_replace('/data:image\/\w+;base64,/', '', $image_64);
+        $image = str_replace(' ', '+', $image);
+
+        // Generate unique filename
+        $imageName = 'strip_' . Str::random(10) . '.' . $extension;
+
+        // Save to storage
+        Storage::disk('public')->put('photos/' . $imageName, base64_decode($image));
+
+        // Save to database
+        Photo::create([
+            'user_id' => auth()->id(),
+            'path' => 'photos/' . $imageName,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Strip saved to your archive!',
+            'path' => 'photos/' . $imageName,
+        ]);
     }
 }
-

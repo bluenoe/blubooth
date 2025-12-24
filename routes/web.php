@@ -28,7 +28,7 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__ . '/auth.php';
 
-// Booth Routes - Strict flow: Select → Capture
+// Booth Routes - Strict flow: Select → Capture → Customize
 Route::middleware(['auth', 'verified'])->group(function () {
     // Entry point - redirects to select
     Route::get('/booth', function () {
@@ -41,8 +41,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Step 2: Capture Session
     Route::get('/booth/capture', [BoothController::class, 'capture'])->name('booth.capture');
 
+    // Step 3: Customize & Review (The Darkroom)
+    Route::get('/booth/customize', [BoothController::class, 'customize'])->name('booth.customize');
+
     // Save captured photo
     Route::post('/booth/save', [BoothController::class, 'store'])->name('booth.store');
+
+    // Save final strip to gallery
+    Route::post('/booth/export', [BoothController::class, 'export'])->name('booth.export');
 });
 
 // Gallery routes

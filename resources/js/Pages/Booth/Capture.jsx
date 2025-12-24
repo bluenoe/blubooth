@@ -167,7 +167,7 @@ export default function Capture({ auth }) {
         setActiveFrameIndex(index);
     };
 
-    // Finish session
+    // Finish session - go to customize page
     const handleFinish = () => {
         if (photos.includes(null)) {
             if (!confirm('You haven\'t captured all frames. Continue anyway?')) return;
@@ -177,7 +177,8 @@ export default function Capture({ auth }) {
         localStorage.setItem('blu_captured_photos', JSON.stringify(photos));
         localStorage.setItem('blu_capture_time', new Date().toISOString());
 
-        router.visit('/gallery');
+        // Navigate to The Darkroom (customize page)
+        router.visit(route('booth.customize'));
     };
 
     // Toggle camera flip
