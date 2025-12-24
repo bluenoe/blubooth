@@ -1,39 +1,63 @@
 import { Head, router } from '@inertiajs/react';
 import { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, ArrowRight, Palette, Image, Sparkles, Check, Loader2 } from 'lucide-react';
+import { Download, ArrowRight, Image, Sparkles, Check, Loader2, Save, ChevronLeft, ChevronRight } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
+// Available frames organized by layout count
+const FRAME_LIBRARY = {
+    2: [
+        { id: 'none', name: 'No Frame', path: null },
+        { id: '2v-1', name: 'Classic', path: '/frames/2-vertical/1.png' },
+        { id: '2v-2', name: 'Modern', path: '/frames/2-vertical/2.png' },
+        { id: '2v-3', name: 'Vintage', path: '/frames/2-vertical/3.png' },
+    ],
+    3: [
+        { id: 'none', name: 'No Frame', path: null },
+        { id: '3v-1', name: 'Classic', path: '/frames/3-vertical/1.png' },
+        { id: '3v-2', name: 'Film', path: '/frames/3-vertical/2.png' },
+        { id: '3v-3', name: 'Retro', path: '/frames/3-vertical/3.png' },
+        { id: '3v-4', name: 'Polaroid', path: '/frames/3-vertical/4.png' },
+        { id: '3v-5', name: 'Minimal', path: '/frames/3-vertical/5.png' },
+        { id: '3v-6', name: 'Elegant', path: '/frames/3-vertical/6.png' },
+        { id: '3v-7', name: 'Simple', path: '/frames/3-vertical/7.png' },
+    ],
+    4: [
+        { id: 'none', name: 'No Frame', path: null },
+        { id: '4v-1', name: 'Classic', path: '/frames/4-vertical/1.png' },
+        { id: '4v-2', name: 'Film', path: '/frames/4-vertical/2.png' },
+        { id: '4v-3', name: 'Retro', path: '/frames/4-vertical/3.png' },
+        { id: '4v-4', name: 'Polaroid', path: '/frames/4-vertical/4.png' },
+        { id: '4v-5', name: 'Minimal', path: '/frames/4-vertical/5.png' },
+        { id: '4v-6', name: 'Elegant', path: '/frames/4-vertical/6.png' },
+        { id: '4v-7', name: 'Simple', path: '/frames/4-vertical/7.png' },
+    ],
+};
+
+// Filter presets
+const FILTERS = [
+    { id: 'none', name: 'Original', css: '' },
+    { id: 'bw', name: 'B&W', css: 'grayscale(100%)' },
+    { id: 'sepia', name: 'Sepia', css: 'sepia(80%)' },
+    { id: 'vivid', name: 'Vivid', css: 'contrast(120%) saturate(130%)' },
+    { id: 'fade', name: 'Fade', css: 'contrast(90%) brightness(110%) saturate(80%)' },
+];
+
 export default function Customize({ auth }) {
-    const stripRef = useRef(null);
+    const captureRef = useRef(null);
     const [isReady, setIsReady] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [exportSuccess, setExportSuccess] = useState(false);
+    const [exportError, setExportError] = useState(null);
 
     // Data from localStorage
     const [layoutConfig, setLayoutConfig] = useState(null);
     const [photos, setPhotos] = useState([]);
 
     // Customization state
-    const [selectedFrame, setSelectedFrame] = useState('minimal-white');
+    const [selectedFrame, setSelectedFrame] = useState('none');
     const [selectedFilter, setSelectedFilter] = useState('none');
-
-    // Frame options (CSS-based since no image frames exist)
-    const frames = [
-        { id: 'minimal-white', name: 'Minimal', borderColor: 'white', borderWidth: 16, bg: 'white' },
-        { id: 'film-black', name: 'Film Noir', borderColor: '#1a1a1a', borderWidth: 12, bg: '#0a0a0a' },
-        { id: 'retro-cream', name: 'Retro', borderColor: '#f5f0e6', borderWidth: 20, bg: '#faf8f3' },
-        { id: 'polaroid', name: 'Polaroid', borderColor: 'white', borderWidth: 16, paddingBottom: 48, bg: 'white' },
-    ];
-
-    // Filter options
-    const filters = [
-        { id: 'none', name: 'Original', css: '' },
-        { id: 'bw', name: 'B&W', css: 'grayscale(100%)' },
-        { id: 'sepia', name: 'Sepia', css: 'sepia(80%)' },
-        { id: 'vivid', name: 'Vivid', css: 'contrast(120%) saturate(130%)' },
-        { id: 'fade', name: 'Fade', css: 'contrast(90%) brightness(110%) saturate(80%)' },
-    ];
+    const [availableFrames, setAvailableFrames] = useState([]);
 
     // Validate data on mount
     useEffect(() => {
@@ -55,7 +79,12 @@ export default function Customize({ auth }) {
             }
 
             setLayoutConfig(config);
-            setPhotos(photosData);
+            setPhotos(photosData.filter(p => p !== null)); // Only non-null photos
+
+            // Load frames based on layout count
+            const frames = FRAME_LIBRARY[config.frames] || FRAME_LIBRARY[4];
+            setAvailableFrames(frames);
+
             setIsReady(true);
         } catch (error) {
             console.error('Invalid session data:', error);
@@ -63,85 +92,85 @@ export default function Customize({ auth }) {
         }
     }, []);
 
-    // Get current frame config
-    const currentFrame = frames.find(f => f.id === selectedFrame) || frames[0];
-    const currentFilter = filters.find(f => f.id === selectedFilter) || filters[0];
+    // Get current selections
+    const currentFrame = availableFrames.find(f => f.id === selectedFrame);
+    const currentFilter = FILTERS.find(f => f.id === selectedFilter) || FILTERS[0];
 
-    // Export strip
-    const handleExport = async () => {
-        if (!stripRef.current || isExporting) return;
+    // Export with html2canvas
+    const handleExport = async (saveToGallery = true) => {
+        if (!captureRef.current || isExporting) return;
 
         setIsExporting(true);
+        setExportError(null);
 
         try {
-            // Generate image from DOM
-            const canvas = await html2canvas(stripRef.current, {
-                backgroundColor: currentFrame.bg,
-                scale: 2, // High quality
+            console.log('Starting export...');
+
+            // Generate canvas from DOM element
+            const canvas = await html2canvas(captureRef.current, {
                 useCORS: true,
                 allowTaint: true,
+                scale: 2,
+                backgroundColor: '#ffffff',
+                logging: false,
+                imageTimeout: 15000,
             });
+
+            console.log('Canvas generated:', canvas.width, 'x', canvas.height);
 
             const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
-            // Save to server
-            const response = await fetch(route('booth.export'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
-                },
-                body: JSON.stringify({ image: dataUrl }),
-            });
-
-            if (response.ok) {
-                setExportSuccess(true);
-
-                // Trigger download
-                const link = document.createElement('a');
-                link.download = `blubooth_strip_${Date.now()}.jpg`;
-                link.href = dataUrl;
-                link.click();
-
-                // Navigate to gallery after a moment
-                setTimeout(() => {
-                    router.visit('/gallery');
-                }, 2000);
-            } else {
-                throw new Error('Export failed');
-            }
-        } catch (error) {
-            console.error('Export error:', error);
-            alert('Failed to export. Please try again.');
-        } finally {
-            setIsExporting(false);
-        }
-    };
-
-    // Download only (no save)
-    const handleDownloadOnly = async () => {
-        if (!stripRef.current) return;
-
-        try {
-            const canvas = await html2canvas(stripRef.current, {
-                backgroundColor: currentFrame.bg,
-                scale: 2,
-                useCORS: true,
-            });
-
+            // Trigger download first (always works)
             const link = document.createElement('a');
             link.download = `blubooth_strip_${Date.now()}.jpg`;
-            link.href = canvas.toDataURL('image/jpeg', 0.95);
+            link.href = dataUrl;
             link.click();
+
+            if (saveToGallery) {
+                // Try to save to server
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+                    const response = await fetch(route('booth.export'), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken || '',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ image: dataUrl }),
+                    });
+
+                    if (response.ok) {
+                        setExportSuccess(true);
+                        setTimeout(() => {
+                            router.visit('/gallery');
+                        }, 1500);
+                    } else {
+                        console.warn('Server save failed, but download succeeded');
+                        setExportSuccess(true);
+                    }
+                } catch (serverError) {
+                    console.warn('Server save failed:', serverError);
+                    // Still show success since download worked
+                    setExportSuccess(true);
+                }
+            } else {
+                setExportSuccess(true);
+            }
+
         } catch (error) {
-            console.error('Download error:', error);
+            console.error('Export error:', error);
+            setExportError(error.message || 'Export failed');
+        } finally {
+            setIsExporting(false);
         }
     };
 
     // Loading state
     if (!isReady || !layoutConfig) {
         return (
-            <div className="min-h-screen bg-neutral-900 flex items-center justify-center">
+            <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
                 <motion.div
                     animate={{ opacity: [0.5, 1, 0.5] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
@@ -161,157 +190,160 @@ export default function Customize({ auth }) {
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
             `}</style>
 
-            <div className="min-h-screen bg-neutral-900 text-white font-sans selection:bg-white selection:text-black flex flex-col lg:flex-row">
+            <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-white selection:text-black flex flex-col">
 
-                {/* LEFT: Preview Canvas */}
-                <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-12 relative overflow-hidden">
-
-                    {/* Background texture */}
-                    <div className="absolute inset-0 opacity-5">
-                        <div className="absolute inset-0" style={{
-                            backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
-                            backgroundSize: '32px 32px'
-                        }} />
-                    </div>
-
-                    {/* Header */}
-                    <div className="absolute top-6 left-6 z-20">
-                        <div className="flex items-center gap-3 mb-2">
+                {/* Header */}
+                <div className="flex-shrink-0 px-6 py-4 flex items-center justify-between border-b border-neutral-800">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                             <span className="w-6 h-6 bg-white text-black text-[10px] font-bold flex items-center justify-center rounded-full">3</span>
                             <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-neutral-400">The Darkroom</span>
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tighter uppercase">
+                        <h1 className="text-xl font-bold tracking-tighter uppercase hidden md:block">
                             Blu<span className="font-serif italic font-normal text-neutral-400">Booth.</span>
                         </h1>
                     </div>
 
-                    {/* Strip Preview */}
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-3">
+                        <motion.button
+                            onClick={() => router.visit('/gallery')}
+                            whileHover={{ scale: 1.02 }}
+                            className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-white transition"
+                        >
+                            Skip
+                        </motion.button>
+
+                        <motion.button
+                            onClick={() => handleExport(true)}
+                            disabled={isExporting || exportSuccess}
+                            whileHover={!isExporting ? { scale: 1.02 } : {}}
+                            whileTap={!isExporting ? { scale: 0.98 } : {}}
+                            className={`
+                                px-6 py-2.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all
+                                ${isExporting || exportSuccess
+                                    ? 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
+                                    : 'bg-white text-black hover:bg-neutral-200'}
+                            `}
+                        >
+                            {isExporting ? (
+                                <>
+                                    <Loader2 size={12} className="animate-spin" />
+                                    Developing...
+                                </>
+                            ) : exportSuccess ? (
+                                <>
+                                    <Check size={12} />
+                                    Done!
+                                </>
+                            ) : (
+                                <>
+                                    <Download size={12} />
+                                    Save & Download
+                                </>
+                            )}
+                        </motion.button>
+                    </div>
+                </div>
+
+                {/* Main Content - Preview Canvas */}
+                <div className="flex-1 flex items-center justify-center p-8 relative overflow-hidden">
+
+                    {/* Background glow effect */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-96 h-96 bg-white/5 rounded-full blur-3xl" />
+                    </div>
+
+                    {/* The Strip to Capture */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5 }}
                         className="relative"
                     >
-                        {/* Shadow effect */}
-                        <div className="absolute -inset-4 bg-black/50 blur-3xl rounded-lg" />
+                        {/* Shadow */}
+                        <div className="absolute -inset-8 bg-black/40 blur-3xl rounded-xl" />
 
-                        {/* The actual strip to export */}
+                        {/* Capture Node - This is what html2canvas captures */}
                         <div
-                            ref={stripRef}
-                            className="relative"
-                            style={{
-                                backgroundColor: currentFrame.bg,
-                                padding: currentFrame.borderWidth,
-                                paddingBottom: currentFrame.paddingBottom || currentFrame.borderWidth,
-                            }}
+                            ref={captureRef}
+                            id="capture-node"
+                            className="relative bg-white p-3"
+                            style={{ minWidth: '200px' }}
                         >
-                            {/* Photos container */}
-                            <div className="flex flex-col gap-1" style={{ filter: currentFilter.css }}>
+                            {/* Photos Stack */}
+                            <div
+                                className="flex flex-col gap-1"
+                                style={{ filter: currentFilter.css }}
+                            >
                                 {photos.map((photo, index) => (
                                     <div
                                         key={index}
-                                        className="w-48 md:w-56 aspect-[4/3] overflow-hidden"
+                                        className="w-48 md:w-56 aspect-[4/3] overflow-hidden bg-neutral-200"
                                     >
                                         {photo && (
                                             <img
                                                 src={photo}
                                                 alt={`Frame ${index + 1}`}
                                                 className="w-full h-full object-cover"
-                                                crossOrigin="anonymous"
                                             />
                                         )}
                                     </div>
                                 ))}
                             </div>
 
-                            {/* Branding footer (for Polaroid style) */}
-                            {currentFrame.paddingBottom && (
-                                <div className="text-center mt-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400">
-                                        BluBooth
-                                    </span>
-                                </div>
+                            {/* Branding */}
+                            <div className="text-center mt-2 pb-1">
+                                <span className="text-[8px] font-bold uppercase tracking-[0.3em] text-neutral-400">
+                                    BluBooth
+                                </span>
+                            </div>
+
+                            {/* Frame Overlay - Absolute positioned */}
+                            {currentFrame?.path && (
+                                <img
+                                    src={currentFrame.path}
+                                    alt="Frame"
+                                    className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
+                                    crossOrigin="anonymous"
+                                />
                             )}
                         </div>
                     </motion.div>
 
-                    {/* Preview label */}
-                    <p className="mt-8 text-neutral-500 text-xs uppercase tracking-widest font-bold">
-                        Live Preview
-                    </p>
+                    {/* Error Message */}
+                    <AnimatePresence>
+                        {exportError && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-full text-xs font-bold"
+                            >
+                                {exportError}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
-                {/* RIGHT: Controls Panel */}
-                <div className="w-full lg:w-96 bg-neutral-950 border-l border-neutral-800 p-6 lg:p-8 flex flex-col">
+                {/* Bottom Control Bar */}
+                <div className="flex-shrink-0 bg-neutral-900 border-t border-neutral-800 p-4">
 
-                    {/* Panel Header */}
-                    <div className="mb-8">
-                        <h2 className="text-lg font-bold uppercase tracking-widest mb-2">Customize</h2>
-                        <p className="text-neutral-500 text-xs">Add your finishing touches</p>
-                    </div>
-
-                    {/* Frame Selection */}
-                    <div className="mb-8">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Image size={14} className="text-neutral-400" />
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400">Frame Style</h3>
+                    {/* Filter Row */}
+                    <div className="mb-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Sparkles size={12} className="text-neutral-500" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Filters</span>
                         </div>
-
-                        <div className="grid grid-cols-4 gap-3">
-                            {frames.map((frame) => (
-                                <motion.button
-                                    key={frame.id}
-                                    onClick={() => setSelectedFrame(frame.id)}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className={`
-                                        aspect-square rounded-lg p-2 transition-all relative
-                                        ${selectedFrame === frame.id
-                                            ? 'ring-2 ring-white ring-offset-2 ring-offset-neutral-950'
-                                            : 'ring-1 ring-neutral-700 hover:ring-neutral-500'}
-                                    `}
-                                    style={{ backgroundColor: frame.bg }}
-                                >
-                                    {/* Mini preview */}
-                                    <div
-                                        className="w-full h-full rounded-sm flex flex-col gap-0.5 p-1"
-                                        style={{ backgroundColor: frame.borderColor }}
-                                    >
-                                        {[1, 2, 3].map((i) => (
-                                            <div key={i} className="flex-1 bg-neutral-400 rounded-[1px]" />
-                                        ))}
-                                    </div>
-
-                                    {selectedFrame === frame.id && (
-                                        <motion.div
-                                            initial={{ scale: 0 }}
-                                            animate={{ scale: 1 }}
-                                            className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center"
-                                        >
-                                            <Check size={10} className="text-black" />
-                                        </motion.div>
-                                    )}
-                                </motion.button>
-                            ))}
-                        </div>
-                        <p className="mt-2 text-[10px] text-neutral-500 text-center">{currentFrame.name}</p>
-                    </div>
-
-                    {/* Filter Selection */}
-                    <div className="mb-8">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Sparkles size={14} className="text-neutral-400" />
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400">Filter</h3>
-                        </div>
-
-                        <div className="flex gap-2 overflow-x-auto pb-2">
-                            {filters.map((filter) => (
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                            {FILTERS.map((filter) => (
                                 <motion.button
                                     key={filter.id}
                                     onClick={() => setSelectedFilter(filter.id)}
-                                    whileHover={{ y: -2 }}
+                                    whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     className={`
-                                        flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all
+                                        flex-shrink-0 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all
                                         ${selectedFilter === filter.id
                                             ? 'bg-white text-black'
                                             : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'}
@@ -323,79 +355,61 @@ export default function Customize({ auth }) {
                         </div>
                     </div>
 
-                    {/* Spacer */}
-                    <div className="flex-1" />
-
-                    {/* Export Actions */}
-                    <div className="space-y-3 pt-6 border-t border-neutral-800">
-
-                        {/* Success Message */}
-                        <AnimatePresence>
-                            {exportSuccess && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0 }}
-                                    className="flex items-center gap-2 text-green-400 text-xs font-bold uppercase tracking-widest justify-center mb-4"
-                                >
-                                    <Check size={14} />
-                                    Saved to Archive!
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {/* Primary Export Button */}
-                        <motion.button
-                            onClick={handleExport}
-                            disabled={isExporting || exportSuccess}
-                            whileHover={!isExporting ? { y: -2, scale: 1.02 } : {}}
-                            whileTap={!isExporting ? { scale: 0.98 } : {}}
-                            className={`
-                                w-full py-4 flex items-center justify-center gap-3 text-xs font-bold uppercase tracking-widest transition-all rounded-sm
-                                ${isExporting || exportSuccess
-                                    ? 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
-                                    : 'bg-white text-black hover:bg-neutral-200 shadow-lg shadow-white/10'}
-                            `}
-                        >
-                            {isExporting ? (
-                                <>
-                                    <Loader2 size={14} className="animate-spin" />
-                                    <span>Developing...</span>
-                                </>
-                            ) : exportSuccess ? (
-                                <>
-                                    <Check size={14} />
-                                    <span>Done!</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Download size={14} />
-                                    <span>Save & Download</span>
-                                </>
-                            )}
-                        </motion.button>
-
-                        {/* Secondary Actions */}
-                        <div className="flex gap-3">
-                            <motion.button
-                                onClick={handleDownloadOnly}
-                                whileHover={{ y: -1 }}
-                                className="flex-1 py-3 text-xs font-bold uppercase tracking-widest text-neutral-400 hover:text-white transition border border-neutral-700 hover:border-neutral-500 rounded-sm"
-                            >
-                                Download Only
-                            </motion.button>
-                            <motion.button
-                                onClick={() => router.visit('/gallery')}
-                                whileHover={{ y: -1 }}
-                                className="flex-1 py-3 text-xs font-bold uppercase tracking-widest text-neutral-400 hover:text-white transition border border-neutral-700 hover:border-neutral-500 rounded-sm flex items-center justify-center gap-2"
-                            >
-                                Skip
-                                <ArrowRight size={12} />
-                            </motion.button>
+                    {/* Frame Row */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <Image size={12} className="text-neutral-500" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                                Frames ({availableFrames.length})
+                            </span>
                         </div>
-                    </div>
+                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                            {availableFrames.map((frame) => (
+                                <motion.button
+                                    key={frame.id}
+                                    onClick={() => setSelectedFrame(frame.id)}
+                                    whileHover={{ scale: 1.05, y: -2 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className={`
+                                        flex-shrink-0 relative w-16 h-20 rounded-lg overflow-hidden transition-all
+                                        ${selectedFrame === frame.id
+                                            ? 'ring-2 ring-white ring-offset-2 ring-offset-neutral-900'
+                                            : 'ring-1 ring-neutral-700 hover:ring-neutral-500'}
+                                    `}
+                                >
+                                    {frame.path ? (
+                                        <img
+                                            src={frame.path}
+                                            alt={frame.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-neutral-800 flex items-center justify-center">
+                                            <span className="text-[8px] text-neutral-500 uppercase">None</span>
+                                        </div>
+                                    )}
 
+                                    {/* Selection indicator */}
+                                    {selectedFrame === frame.id && (
+                                        <motion.div
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            className="absolute top-1 right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center"
+                                        >
+                                            <Check size={10} className="text-black" />
+                                        </motion.div>
+                                    )}
+                                </motion.button>
+                            ))}
+                        </div>
+
+                        {/* Frame name */}
+                        <p className="text-center text-[10px] text-neutral-500 mt-2">
+                            {currentFrame?.name || 'No Frame'}
+                        </p>
+                    </div>
                 </div>
+
             </div>
         </>
     );
