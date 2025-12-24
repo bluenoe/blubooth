@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BoothController;
 use Illuminate\Foundation\Application;
@@ -31,3 +32,7 @@ Route::get('/booth', [BoothController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('booth');
 Route::post('/booth/save', [BoothController::class, 'store'])->name('booth.store');
+
+// Gallery routes
+Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
+Route::delete('/gallery/{id}', [GalleryController::class, 'destroy'])->name('gallery.destroy');
