@@ -36,3 +36,5 @@ Route::post('/booth/save', [BoothController::class, 'store'])->name('booth.store
 // Gallery routes
 Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
 Route::delete('/gallery/{id}', [GalleryController::class, 'destroy'])->name('gallery.destroy');
+
+Route::get('/booth/layout', [BoothController::class, 'selectLayout'])->name('booth.select');
