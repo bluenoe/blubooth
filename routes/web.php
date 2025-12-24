@@ -28,13 +28,23 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__ . '/auth.php';
 
-Route::get('/booth', [BoothController::class, 'index'])
-    ->middleware(['auth', 'verified'])
-    ->name('booth');
-Route::post('/booth/save', [BoothController::class, 'store'])->name('booth.store');
+// Booth Routes - Strict flow: Select → Capture
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Entry point - redirects to select
+    Route::get('/booth', function () {
+        return redirect()->route('booth.select');
+    })->name('booth');
+
+    // Step 1: Layout Selection (Entry Point)
+    Route::get('/booth/select', [BoothController::class, 'selectLayout'])->name('booth.select');
+
+    // Step 2: Capture Session
+    Route::get('/booth/capture', [BoothController::class, 'capture'])->name('booth.capture');
+
+    // Save captured photo
+    Route::post('/booth/save', [BoothController::class, 'store'])->name('booth.store');
+});
 
 // Gallery routes
 Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
 Route::delete('/gallery/{id}', [GalleryController::class, 'destroy'])->name('gallery.destroy');
-
-Route::get('/booth/layout', [BoothController::class, 'selectLayout'])->name('booth.select');

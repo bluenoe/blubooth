@@ -10,18 +10,34 @@ use Illuminate\Support\Str;
 
 class BoothController extends Controller
 {
-    public function index()
+    /**
+     * Step 1: Layout Selection Page (Entry Point)
+     */
+    public function selectLayout()
     {
-        // Lấy danh sách ảnh của user hiện tại, cái mới nhất lên đầu
-        $photos = Photo::where('user_id', auth()->id())
-            ->latest()
-            ->get();
-
-        return Inertia::render('Booth/Index', [
-            'photos' => $photos // Gửi biến photos sang React
-        ]);
+        return Inertia::render('Booth/SelectLayout');
     }
 
+    /**
+     * Step 2: Capture Session Page
+     * User must have selected a layout first (validated client-side via localStorage)
+     */
+    public function capture()
+    {
+        return Inertia::render('Booth/Capture');
+    }
+
+    /**
+     * Legacy index - redirects to capture
+     */
+    public function index()
+    {
+        return redirect()->route('booth.select');
+    }
+
+    /**
+     * Store captured photo
+     */
     public function store(Request $request)
     {
         // Validate dữ liệu gửi lên
@@ -51,10 +67,7 @@ class BoothController extends Controller
         ]);
 
         // 6. Trả về thông báo thành công cho React
-        return redirect()->back()->with('message', 'Đã lưu ảnh vào album thành công!');
-    }
-    public function selectLayout()
-    {
-        return Inertia::render('Booth/SelectLayout');
+        return redirect()->back()->with('message', 'Photo saved to your album!');
     }
 }
+
