@@ -93,10 +93,11 @@ class BoothController extends Controller
         // Save to storage
         Storage::disk('public')->put('photos/' . $imageName, base64_decode($image));
 
-        // Save to database
+        // Save to database with type 'strip'
         Photo::create([
             'user_id' => auth()->id(),
             'path' => 'photos/' . $imageName,
+            'type' => 'strip',
         ]);
 
         return response()->json([

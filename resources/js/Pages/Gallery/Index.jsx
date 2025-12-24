@@ -1,36 +1,37 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, Download, X, Maximize2, Clock, ChevronLeft, ChevronRight, Camera } from 'lucide-react';
-import NavBar from '@/Components/NavBar';
-import Footer from '@/Components/Footer';
+import { Trash2, Download, X, Camera, ChevronLeft, ChevronRight, Clock, Layers, Image } from 'lucide-react';
 
 export default function Gallery({ auth, photos }) {
     const { flash = {} } = usePage().props;
+    const [activeTab, setActiveTab] = useState('strips');
     const [selectedPhoto, setSelectedPhoto] = useState(null);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Find current photo index
+    // Filter photos by type
+    const strips = photos.data.filter(p => p.type === 'strip' || p.path?.includes('strip_'));
+    const snapshots = photos.data.filter(p => p.type === 'raw' || (!p.path?.includes('strip_') && p.type !== 'strip'));
+
+    const displayedPhotos = activeTab === 'strips' ? strips : snapshots;
+
+    // Find current index
     const currentIndex = selectedPhoto
-        ? photos.data.findIndex(p => p.id === selectedPhoto.id)
+        ? displayedPhotos.findIndex(p => p.id === selectedPhoto.id)
         : -1;
 
-    // Navigate between photos
+    // Navigate photos
     const navigatePhoto = useCallback((direction) => {
-        if (currentIndex === -1) return;
+        if (currentIndex === -1 || displayedPhotos.length === 0) return;
 
-        const total = photos.data.length;
-        let newIndex;
-
-        if (direction === 'next') {
-            newIndex = (currentIndex + 1) % total;
-        } else {
-            newIndex = (currentIndex - 1 + total) % total;
-        }
+        const total = displayedPhotos.length;
+        let newIndex = direction === 'next'
+            ? (currentIndex + 1) % total
+            : (currentIndex - 1 + total) % total;
 
         setIsLoaded(false);
-        setSelectedPhoto(photos.data[newIndex]);
-    }, [currentIndex, photos.data]);
+        setSelectedPhoto(displayedPhotos[newIndex]);
+    }, [currentIndex, displayedPhotos]);
 
     // Open lightbox
     const openLightbox = (photo) => {
@@ -47,7 +48,7 @@ export default function Gallery({ auth, photos }) {
 
     // Delete photo
     const handleDelete = (id) => {
-        if (confirm('Permanently delete this memory?')) {
+        if (confirm('Permanently delete this from the archive?')) {
             router.delete(route('gallery.destroy', id), {
                 onSuccess: () => closeLightbox(),
             });
@@ -58,7 +59,7 @@ export default function Gallery({ auth, photos }) {
     const handleDownload = (path) => {
         const link = document.createElement('a');
         link.href = `/storage/${path}`;
-        link.download = `blu_archive_${Date.now()}.png`;
+        link.download = `blubooth_${Date.now()}.png`;
         link.click();
     };
 
@@ -66,126 +67,173 @@ export default function Gallery({ auth, photos }) {
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (!selectedPhoto) return;
-
-            switch (e.key) {
-                case 'Escape':
-                    closeLightbox();
-                    break;
-                case 'ArrowRight':
-                    navigatePhoto('next');
-                    break;
-                case 'ArrowLeft':
-                    navigatePhoto('prev');
-                    break;
-            }
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowRight') navigatePhoto('next');
+            if (e.key === 'ArrowLeft') navigatePhoto('prev');
         };
-
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [selectedPhoto, navigatePhoto]);
 
     return (
         <>
-            <Head title="Archive" />
+            <Head title="The Archive" />
 
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
             `}</style>
 
-            <div className="min-h-screen bg-white font-sans selection:bg-black selection:text-white flex flex-col">
+            <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-white selection:text-black">
 
-                <NavBar />
+                {/* Header */}
+                <header className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-lg border-b border-neutral-800">
+                    <div className="max-w-7xl mx-auto px-6 py-6">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
 
-                <main className="flex-grow pt-24 pb-24">
-
-                    {/* Header */}
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="sticky top-24 z-30 bg-white/80 backdrop-blur-lg border-b border-neutral-100"
-                    >
-                        <div className="max-w-[1600px] mx-auto px-6 py-6 flex justify-between items-center">
-                            <div className="flex items-center gap-4">
-                                <h1 className="text-2xl font-bold tracking-tighter uppercase">
-                                    The <span className="font-serif italic font-normal text-neutral-400">Archive.</span>
+                            {/* Title */}
+                            <div>
+                                <h1 className="text-4xl md:text-5xl font-serif italic tracking-tight">
+                                    The Archive.
                                 </h1>
-                                <span className="hidden md:inline-block px-3 py-1 bg-neutral-100 text-[10px] font-bold uppercase tracking-widest rounded-full text-neutral-500">
-                                    {photos.data.length} Items
-                                </span>
+                                <p className="text-neutral-500 text-xs uppercase tracking-widest mt-2">
+                                    {photos.data.length} Memories • {strips.length} Strips • {snapshots.length} Snapshots
+                                </p>
                             </div>
-                            <Link
-                                href={route('booth')}
-                                className="text-xs font-bold uppercase tracking-widest hover:text-neutral-500 transition flex items-center gap-2"
-                            >
-                                <Camera size={14} />
-                                New Session
-                            </Link>
-                        </div>
-                    </motion.div>
 
-                    {/* Flash Notification */}
-                    <AnimatePresence>
-                        {flash?.message && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 20 }}
-                                className="fixed bottom-6 left-6 z-40 bg-black text-white px-6 py-3 text-xs font-bold uppercase tracking-widest shadow-xl rounded-full"
-                            >
-                                {flash.message}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                            {/* Actions + Tabs */}
+                            <div className="flex items-center gap-6">
 
-                    {/* Gallery Grid */}
-                    <div className="max-w-[1600px] mx-auto px-4 md:px-6 mt-8">
-                        {photos.data.length === 0 ? (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="h-[60vh] flex flex-col items-center justify-center opacity-40"
-                            >
-                                <p className="font-serif text-3xl text-neutral-300 italic mb-4">"Silence is luxury."</p>
-                                <Link
-                                    href={route('booth')}
-                                    className="text-xs font-bold uppercase border-b border-black pb-1 hover:opacity-60 transition"
-                                >
-                                    Start Creating
-                                </Link>
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-1"
-                            >
-                                {photos.data.map((photo, index) => (
-                                    <motion.div
-                                        key={photo.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        whileHover={{ scale: 1.02 }}
-                                        className="group relative aspect-[4/5] bg-neutral-100 cursor-pointer overflow-hidden"
-                                        onClick={() => openLightbox(photo)}
+                                {/* Tabs */}
+                                <div className="flex items-center gap-1 bg-neutral-900 p-1 rounded-full">
+                                    <button
+                                        onClick={() => setActiveTab('strips')}
+                                        className={`
+                                            flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all
+                                            ${activeTab === 'strips'
+                                                ? 'bg-white text-black'
+                                                : 'text-neutral-400 hover:text-white'}
+                                        `}
                                     >
+                                        <Layers size={12} />
+                                        Strips
+                                        <span className="ml-1 opacity-50">({strips.length})</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('snapshots')}
+                                        className={`
+                                            flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all
+                                            ${activeTab === 'snapshots'
+                                                ? 'bg-white text-black'
+                                                : 'text-neutral-400 hover:text-white'}
+                                        `}
+                                    >
+                                        <Image size={12} />
+                                        Snapshots
+                                        <span className="ml-1 opacity-50">({snapshots.length})</span>
+                                    </button>
+                                </div>
+
+                                {/* New Session */}
+                                <Link
+                                    href={route('booth.select')}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-neutral-200 transition"
+                                >
+                                    <Camera size={12} />
+                                    New Session
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Flash Message */}
+                <AnimatePresence>
+                    {flash?.message && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            className="fixed bottom-6 left-6 z-50 bg-white text-black px-6 py-3 text-xs font-bold uppercase tracking-widest shadow-2xl rounded-full"
+                        >
+                            {flash.message}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Gallery Content */}
+                <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
+
+                    {displayedPhotos.length === 0 ? (
+                        /* Empty State */
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="h-[60vh] flex flex-col items-center justify-center text-center"
+                        >
+                            <div className="w-24 h-24 border border-dashed border-neutral-700 rounded-full flex items-center justify-center mb-8">
+                                {activeTab === 'strips' ? <Layers size={32} className="text-neutral-600" /> : <Image size={32} className="text-neutral-600" />}
+                            </div>
+                            <p className="font-serif italic text-3xl text-neutral-500 mb-4">
+                                {activeTab === 'strips' ? '"No strips developed yet."' : '"No snapshots captured yet."'}
+                            </p>
+                            <Link
+                                href={route('booth.select')}
+                                className="text-[10px] font-bold uppercase tracking-widest border-b border-white pb-1 hover:opacity-60 transition"
+                            >
+                                Start Creating →
+                            </Link>
+                        </motion.div>
+                    ) : (
+                        /* Masonry Grid */
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className={`
+                                ${activeTab === 'strips'
+                                    ? 'columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4'
+                                    : 'columns-2 md:columns-3 lg:columns-4 gap-3'}
+                            `}
+                        >
+                            {displayedPhotos.map((photo, index) => (
+                                <motion.div
+                                    key={photo.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: Math.min(index * 0.05, 0.5) }}
+                                    className="break-inside-avoid mb-4 group cursor-pointer"
+                                    onClick={() => openLightbox(photo)}
+                                >
+                                    <div className="relative overflow-hidden bg-neutral-900 rounded-sm">
                                         <img
                                             src={`/storage/${photo.path}`}
                                             alt="Memory"
                                             loading="lazy"
-                                            className="w-full h-full object-cover transition duration-700 group-hover:scale-105 filter grayscale group-hover:grayscale-0"
+                                            className={`
+                                                w-full transition-all duration-500 
+                                                group-hover:scale-105 group-hover:opacity-80
+                                                ${activeTab === 'strips' ? 'object-contain' : 'object-cover aspect-[4/5]'}
+                                            `}
                                         />
-                                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                                            <Maximize2 className="text-white drop-shadow-md w-6 h-6" strokeWidth={1.5} />
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </motion.div>
-                        )}
-                    </div>
-                </main>
 
-                <Footer />
+                                        {/* Hover Overlay */}
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-white">View</span>
+                                        </div>
+
+                                        {/* Type Badge (for debugging/visibility) */}
+                                        {activeTab === 'strips' && (
+                                            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-[8px] font-bold uppercase tracking-widest rounded">
+                                                Strip
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </motion.div>
+                    )}
+                </main>
             </div>
 
             {/* Immersive Lightbox */}
@@ -206,106 +254,104 @@ export default function Gallery({ auth, photos }) {
                             onClick={closeLightbox}
                         />
 
-                        {/* Content Layer */}
-                        <div className="relative z-10 w-full h-full flex flex-col justify-between pointer-events-none">
+                        {/* Content */}
+                        <div className="relative z-10 w-full h-full flex flex-col pointer-events-none">
 
-                            {/* Close Button */}
-                            <div className="flex justify-end p-6 pointer-events-auto">
+                            {/* Top Bar */}
+                            <div className="flex justify-between items-center p-6 pointer-events-auto">
+                                <div className="text-xs font-bold uppercase tracking-widest text-neutral-500">
+                                    {currentIndex + 1} / {displayedPhotos.length}
+                                </div>
                                 <motion.button
                                     onClick={closeLightbox}
                                     whileHover={{ scale: 1.1, rotate: 90 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    className="group p-3 text-white/50 hover:text-white transition rounded-full hover:bg-white/10"
+                                    className="p-3 text-neutral-400 hover:text-white transition rounded-full hover:bg-white/10"
                                 >
                                     <X size={24} strokeWidth={1} />
                                 </motion.button>
                             </div>
 
-                            {/* Main Image Area */}
+                            {/* Image Area */}
                             <div className="flex-1 flex items-center justify-center relative px-4 md:px-20 pointer-events-auto">
 
-                                {/* Previous Button */}
-                                <motion.button
-                                    onClick={(e) => { e.stopPropagation(); navigatePhoto('prev'); }}
-                                    whileHover={{ scale: 1.2, x: -5 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    className="absolute left-4 md:left-8 p-4 text-white/30 hover:text-white transition hidden md:block"
-                                >
-                                    <ChevronLeft size={40} strokeWidth={0.5} />
-                                </motion.button>
+                                {/* Prev */}
+                                {displayedPhotos.length > 1 && (
+                                    <motion.button
+                                        onClick={(e) => { e.stopPropagation(); navigatePhoto('prev'); }}
+                                        whileHover={{ scale: 1.2, x: -5 }}
+                                        className="absolute left-4 md:left-8 p-4 text-neutral-600 hover:text-white transition"
+                                    >
+                                        <ChevronLeft size={40} strokeWidth={0.5} />
+                                    </motion.button>
+                                )}
 
-                                {/* Main Image */}
+                                {/* Image */}
                                 <motion.img
                                     key={selectedPhoto.id}
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: isLoaded ? 1 : 0, scale: isLoaded ? 1 : 0.95 }}
-                                    transition={{ duration: 0.3 }}
                                     src={`/storage/${selectedPhoto.path}`}
                                     alt="Full View"
-                                    className="max-h-[75vh] max-w-full object-contain shadow-2xl"
+                                    className={`
+                                        max-w-full shadow-2xl
+                                        ${activeTab === 'strips' ? 'max-h-[80vh] object-contain' : 'max-h-[75vh] object-contain'}
+                                    `}
                                     onLoad={() => setIsLoaded(true)}
                                 />
 
-                                {/* Next Button */}
-                                <motion.button
-                                    onClick={(e) => { e.stopPropagation(); navigatePhoto('next'); }}
-                                    whileHover={{ scale: 1.2, x: 5 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    className="absolute right-4 md:right-8 p-4 text-white/30 hover:text-white transition hidden md:block"
-                                >
-                                    <ChevronRight size={40} strokeWidth={0.5} />
-                                </motion.button>
+                                {/* Next */}
+                                {displayedPhotos.length > 1 && (
+                                    <motion.button
+                                        onClick={(e) => { e.stopPropagation(); navigatePhoto('next'); }}
+                                        whileHover={{ scale: 1.2, x: 5 }}
+                                        className="absolute right-4 md:right-8 p-4 text-neutral-600 hover:text-white transition"
+                                    >
+                                        <ChevronRight size={40} strokeWidth={0.5} />
+                                    </motion.button>
+                                )}
                             </div>
 
-                            {/* Footer Info Bar */}
+                            {/* Bottom Bar */}
                             <motion.div
                                 initial={{ y: 50, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.1 }}
-                                className="w-full p-6 md:p-10 flex flex-col md:flex-row justify-between items-end md:items-center bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-auto"
+                                className="p-6 md:p-10 flex flex-col md:flex-row justify-between items-end md:items-center bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-auto"
                             >
-                                {/* Date Info */}
-                                <div className="text-white mb-6 md:mb-0">
+                                {/* Date */}
+                                <div className="mb-6 md:mb-0">
                                     <h2 className="font-serif italic text-3xl md:text-4xl text-white/90">
                                         {new Date(selectedPhoto.created_at).toLocaleDateString('en-US', {
                                             month: 'long',
-                                            day: 'numeric'
+                                            day: 'numeric',
+                                            year: 'numeric'
                                         })}
                                     </h2>
-                                    <div className="flex items-center gap-4 mt-2 text-white/50 text-xs font-bold uppercase tracking-widest">
-                                        <span className="flex items-center gap-1">
-                                            <Clock size={12} />
-                                            {new Date(selectedPhoto.created_at).toLocaleTimeString([], { timeStyle: 'short' })}
-                                        </span>
-                                        <span className="w-px h-3 bg-white/30" />
-                                        <span>{currentIndex + 1} / {photos.data.length}</span>
+                                    <div className="flex items-center gap-3 mt-2 text-neutral-500 text-xs uppercase tracking-widest">
+                                        <Clock size={12} />
+                                        {new Date(selectedPhoto.created_at).toLocaleTimeString([], { timeStyle: 'short' })}
                                     </div>
                                 </div>
 
                                 {/* Actions */}
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
                                     <motion.button
                                         onClick={() => handleDownload(selectedPhoto.path)}
                                         whileHover={{ y: -2, scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
                                         className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-full text-xs font-bold uppercase tracking-widest hover:bg-neutral-200 transition"
                                     >
                                         <Download size={14} />
-                                        <span className="hidden md:inline">Save</span>
+                                        Download
                                     </motion.button>
 
                                     <motion.button
                                         onClick={() => handleDelete(selectedPhoto.id)}
                                         whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.9 }}
-                                        className="p-3 border border-white/20 rounded-full text-white/50 hover:text-red-400 hover:border-red-400/50 hover:bg-red-900/10 transition"
-                                        title="Delete"
+                                        className="p-3 border border-neutral-700 rounded-full text-neutral-400 hover:text-red-400 hover:border-red-400/50 transition"
                                     >
                                         <Trash2 size={18} />
                                     </motion.button>
                                 </div>
                             </motion.div>
-
                         </div>
                     </motion.div>
                 )}
