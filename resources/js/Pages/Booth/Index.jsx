@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useRef, useEffect, useState } from 'react';
 
 export default function Booth({ auth }) {
@@ -8,6 +8,10 @@ export default function Booth({ auth }) {
     const [stream, setStream] = useState(null);
     const [photo, setPhoto] = useState(null); // Biến chứa ảnh sau khi chụp
     const [error, setError] = useState('');
+
+    // Lấy thông báo flash từ server (nếu có)
+    const { flash } = usePage().props;
+    const [processing, setProcessing] = useState(false);
 
     const startCamera = async () => {
         try {
@@ -65,6 +69,27 @@ export default function Booth({ auth }) {
         }
     };
 
+    // --- HÀM MỚI: Gửi ảnh về Server ---
+    const savePhotoToServer = () => {
+        if (!photo) return;
+        setProcessing(true); // Bật trạng thái loading
+
+        router.post(route('booth.store'), {
+            image: photo // Gửi chuỗi base64 lên
+        }, {
+            onSuccess: () => {
+                setProcessing(false);
+                setPhoto(null); // Reset để chụp tấm mới
+                // startCamera(); // Nếu cần thiết thì gọi lại camera
+            },
+            onError: (errors) => {
+                setProcessing(false);
+                alert('Lỗi khi lưu ảnh!');
+                console.log(errors);
+            }
+        });
+    };
+    
     useEffect(() => {
         if (!photo) startCamera(); // Chỉ bật cam khi chưa có ảnh
         return () => {
