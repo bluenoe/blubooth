@@ -53,4 +53,8 @@ class BoothController extends Controller
         // 6. Trả về thông báo thành công cho React
         return redirect()->back()->with('message', 'Đã lưu ảnh vào album thành công!');
     }
+    public function selectLayout()
+    {
+        return Inertia::render('Booth/SelectLayout');
+    }
 }
