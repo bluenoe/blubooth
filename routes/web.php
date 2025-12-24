@@ -25,8 +25,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 
 Route::get('/booth', [BoothController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('booth');
+Route::post('/booth/save', [BoothController::class, 'store'])->name('booth.store');
