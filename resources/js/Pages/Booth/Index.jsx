@@ -2,15 +2,15 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useRef, useEffect, useState } from 'react';
 
-export default function Booth({ auth }) {
+// Nhận thêm prop 'photos' từ Controller gửi sang
+export default function Booth({ auth, photos }) {
     const videoRef = useRef(null);
-    const canvasRef = useRef(null); // Thêm cái này để xử lý ảnh
+    const canvasRef = useRef(null);
     const [stream, setStream] = useState(null);
-    const [photo, setPhoto] = useState(null); // Biến chứa ảnh sau khi chụp
-    const [error, setError] = useState('');
-
-    // Lấy thông báo flash từ server (nếu có)
-    const { flash } = usePage().props;
+    const [photo, setPhoto] = useState(null);
+    
+    // Lấy flash message
+    const { flash = {} } = usePage().props;
     const [processing, setProcessing] = useState(false);
 
     const startCamera = async () => {
@@ -25,62 +25,36 @@ export default function Booth({ auth }) {
                 videoRef.current.play();
             }
         } catch (err) {
-            setError('Không thể mở camera. Hãy kiểm tra quyền truy cập!');
+            console.error(err);
         }
     };
 
-    // Hàm chụp ảnh
     const capturePhoto = () => {
         const video = videoRef.current;
         const canvas = canvasRef.current;
-
         if (video && canvas) {
-            // Đặt kích thước canvas bằng kích thước video thực tế
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-
             const ctx = canvas.getContext('2d');
-            
-            // Lật ngược ảnh trên canvas để giống gương (Mirror effect)
             ctx.translate(canvas.width, 0);
             ctx.scale(-1, 1);
-
-            // Vẽ hình từ video lên canvas
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            // Chuyển canvas thành dạng ảnh Base64 (chuỗi ký tự)
             const imageSrc = canvas.toDataURL('image/png');
-            setPhoto(imageSrc); // Lưu ảnh vào state để hiển thị
+            setPhoto(imageSrc);
         }
     };
 
-    // Hàm chụp lại (Xóa ảnh, hiện lại video)
-    const retakePhoto = () => {
-        setPhoto(null);
-    };
-
-    // Hàm tải ảnh về máy (Quick win: Lưu về máy tính ngay lập tức)
-    const downloadPhoto = () => {
-        if (photo) {
-            const link = document.createElement('a');
-            link.href = photo;
-            link.download = 'blubooth_photo.png';
-            link.click();
-        }
-    };
-
-    // --- HÀM MỚI: Gửi ảnh về Server ---
     const savePhotoToServer = () => {
         if (!photo) return;
-        setProcessing(true); // Bật trạng thái loading
+        setProcessing(true);
 
         router.post(route('booth.store'), {
-            image: photo // Gửi chuỗi base64 lên
+            image: photo 
         }, {
+            preserveScroll: true, // Giữ nguyên vị trí cuộn trang để thấy ảnh mới
             onSuccess: () => {
                 setProcessing(false);
-                setPhoto(null); // Reset để chụp tấm mới
-                // startCamera(); // Nếu cần thiết thì gọi lại camera
+                setPhoto(null); 
             },
             onError: (errors) => {
                 setProcessing(false);
@@ -89,13 +63,13 @@ export default function Booth({ auth }) {
             }
         });
     };
-    
+
     useEffect(() => {
-        if (!photo) startCamera(); // Chỉ bật cam khi chưa có ảnh
+        if (!photo) startCamera();
         return () => {
             if (stream) stream.getTracks().forEach(track => track.stop());
         };
-    }, [photo]); // Khi photo thay đổi (bấm chụp lại) thì chạy lại logic này
+    }, [photo]);
 
     return (
         <AuthenticatedLayout
@@ -105,56 +79,82 @@ export default function Booth({ auth }) {
             <Head title="Chụp ảnh" />
 
             <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+                    
+                    {/* KHUNG CAMERA */}
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6 text-gray-900 flex flex-col items-center">
                             
-                            {/* Canvas ẩn (dùng để xử lý ngầm, không hiện ra) */}
+                            {/* Thông báo thành công (Đã thêm lại) */}
+                            {flash?.message && (
+                                <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg w-full text-center border border-green-200 shadow-sm animate-bounce">
+                                    ✅ {flash.message}
+                                </div>
+                            )}
+
                             <canvas ref={canvasRef} className="hidden"></canvas>
 
-                            {/* KHUNG HIỂN THỊ CHÍNH */}
                             <div className="relative w-full max-w-2xl aspect-video bg-black rounded-lg overflow-hidden border-4 border-gray-200 shadow-xl">
                                 {photo ? (
-                                    // Nếu đã chụp -> Hiện ảnh tĩnh
                                     <img src={photo} alt="Captured" className="w-full h-full object-cover" />
                                 ) : (
-                                    // Nếu chưa chụp -> Hiện Video Live
-                                    <video
-                                        ref={videoRef}
-                                        autoPlay
-                                        playsInline
-                                        muted
-                                        className="w-full h-full object-cover transform -scale-x-100"
-                                    />
+                                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
                                 )}
                             </div>
 
-                            {/* CÁC NÚT BẤM ĐIỀU KHIỂN */}
                             <div className="mt-8 flex gap-4">
                                 {!photo ? (
-                                    <button 
-                                        onClick={capturePhoto}
-                                        className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-bold text-lg shadow-lg transition transform hover:scale-110 active:scale-95">
+                                    <button onClick={capturePhoto} className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-bold text-lg shadow-lg transition transform hover:scale-105 active:scale-95">
                                         📸 CHỤP TÁCH
                                     </button>
                                 ) : (
                                     <>
-                                        <button 
-                                            onClick={retakePhoto}
-                                            className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-bold shadow transition">
-                                            🔄 Chụp lại
+                                        <button onClick={() => setPhoto(null)} className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-bold shadow transition">
+                                            🔄 Bỏ qua
                                         </button>
+                                        
+                                        {/* Nút Lưu (Đã thêm lại) */}
                                         <button 
-                                            onClick={downloadPhoto}
-                                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow transition flex items-center gap-2">
-                                            ⬇️ Tải về máy
+                                            onClick={savePhotoToServer}
+                                            disabled={processing}
+                                            className={`px-6 py-3 text-white rounded-lg font-bold shadow flex items-center gap-2 transition ${processing ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                        >
+                                            {processing ? '⏳ Đang lưu...' : '💾 LƯU VÀO ALBUM'}
                                         </button>
                                     </>
                                 )}
                             </div>
-
                         </div>
                     </div>
+
+                    {/* KHUNG ALBUM ẢNH (MỚI) */}
+                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                        <div className="p-6">
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">🖼️ Ảnh đã chụp gần đây</h3>
+                            
+                            {photos.length === 0 ? (
+                                <p className="text-gray-500 text-center py-8">Chưa có ảnh nào. Chụp tấm đầu tiên đi!</p>
+                            ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {photos.map((item) => (
+                                        <div key={item.id} className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border shadow-sm">
+                                            {/* Hiển thị ảnh từ thư mục storage */}
+                                            <img 
+                                                src={`/storage/${item.path}`} 
+                                                alt="Photo" 
+                                                className="w-full h-full object-cover transition duration-300 group-hover:scale-110" 
+                                            />
+                                            {/* Overlay ngày tháng */}
+                                            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2 opacity-0 group-hover:opacity-100 transition">
+                                                {new Date(item.created_at).toLocaleString()}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </AuthenticatedLayout>

@@ -12,8 +12,14 @@ class BoothController extends Controller
 {
     public function index()
     {
-        // Trả về giao diện React tên là "Booth/Index"
-        return Inertia::render('Booth/Index');
+        // Lấy danh sách ảnh của user hiện tại, cái mới nhất lên đầu
+        $photos = Photo::where('user_id', auth()->id())
+            ->latest()
+            ->get();
+
+        return Inertia::render('Booth/Index', [
+            'photos' => $photos // Gửi biến photos sang React
+        ]);
     }
 
     public function store(Request $request)
