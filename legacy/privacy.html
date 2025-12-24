@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Blubooth | Chính sách bảo mật</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Import font Poppins -->
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,500,600&display=swap" rel="stylesheet">
+  <!-- Import CSS chính -->
+  <link rel="stylesheet" href="../styles/styles.css">
+  <style>
+    /* Các style riêng cho trang Privacy */
+    .privacy-section {
+      text-align: center;
+      padding: 2rem 0;
+    }
+
+    .privacy-section h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.2px;
+    }
+
+    .privacy-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2.5rem;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: left;
+    }
+
+    .privacy-text-block {
+      background: var(--pastel-beige);
+      border-radius: var(--radius-main);
+      padding: 2rem 2.5rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+      line-height: 1.7;
+      color: #222;
+      font-size: 1.1rem;
+      transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+      width: 100%;
+    }
+
+    .privacy-text-block:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    }
+
+    .privacy-text-block h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 0.8rem;
+    }
+
+    .privacy-text-block p {
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 768px) {
+      .privacy-section h1 {
+        font-size: 1.8rem;
+      }
+      .privacy-content {
+        gap: 1.8rem;
+      }
+      .privacy-text-block {
+        padding: 1.5rem 1.8rem;
+        font-size: 0.95rem;
+      }
+      .privacy-text-block h2 {
+        font-size: 1.4rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .privacy-section h1 {
+        font-size: 1.5rem;
+      }
+      .privacy-text-block {
+        padding: 1rem 1.2rem;
+        font-size: 0.9rem;
+      }
+      .privacy-text-block h2 {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="header-placeholder"></div>
+  <main>
+    <div class="content-container">
+      <section class="privacy-section">
+        <h1 data-translate="privacy_title">Chính sách bảo mật</h1>
+        <div class="privacy-content">
+          <div class="privacy-text-block">
+            <h2 data-translate="privacy_main_title">Quyền riêng tư của bạn siêu quan trọng với tụi mình nha! 😊</h2>
+            <p data-translate="privacy_main_text">
+              Blubooth không hề thu thập, lưu trữ hay chia sẻ bất kỳ dữ liệu hay ảnh cute của bạn đâu. Tất cả đều diễn ra ngay trên thiết bị của bạn thôi – ảnh của bạn an toàn trong trình duyệt, không đi lang thang đâu hết! 📸
+              
+              Tụi mình chỉ xin phép dùng camera khi bạn cho phép, và ảnh chụp xong là của bạn mãi mãi. Không upload lén, không track gì hết, siêu an toàn và dễ thương luôn! 💕
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <div id="footer-placeholder"></div>
+  <script src="../scripts/layout-loader.js" defer></script>
+  <script>
+    // Đảm bảo translation.js chỉ chạy sau khi header đã load xong
+    window.addEventListener('DOMContentLoaded', function() {
+      // Đợi header/footer được inject xong
+      const checkHeader = setInterval(() => {
+        const langBtns = document.querySelectorAll('.lang-btn');
+        if (langBtns.length > 0) {
+          clearInterval(checkHeader);
+          // Nạp translation.js động
+          const script = document.createElement('script');
+          script.src = '../scripts/translation.js';
+          script.onload = function() {
+            // Gắn lại sự kiện click cho nút ngôn ngữ (nếu translation.js chưa tự gắn)
+            langBtns.forEach(btn => {
+              btn.onclick = function() {
+                const lang = btn.getAttribute('data-lang');
+                if (typeof setLanguage === 'function') setLanguage(lang);
+              };
+            });
+            // Áp dụng lại ngôn ngữ đã lưu
+            const savedLang = localStorage.getItem('blubooth_lang') || 'vi';
+            if (typeof setLanguage === 'function') setLanguage(savedLang);
+          };
+          document.body.appendChild(script);
+        }
+      }, 30);
+
+      // Hamburger toggle cho mobile nav
+      const checkNav = setInterval(() => {
+        const navToggle = document.getElementById('navToggle');
+        const navbar = document.getElementById('navbar');
+        if (navToggle && navbar) {
+          clearInterval(checkNav);
+          navToggle.addEventListener('click', function () {
+            navbar.classList.toggle('open');
+            navToggle.setAttribute('aria-expanded', navbar.classList.contains('open'));
+          });
+          // Fix: Close nav on blur only if it's open to prevent immediate close on click
+          navToggle.addEventListener('blur', function () {
+            setTimeout(() => {
+              if (navbar.classList.contains('open')) {
+                navbar.classList.remove('open');
+                navToggle.setAttribute('aria-expanded', 'false');
+              }
+            }, 240); // Small delay to allow click event to register
+          });
+        }
+      }, 30);
+    });
+  </script>
+</body>
+</html>

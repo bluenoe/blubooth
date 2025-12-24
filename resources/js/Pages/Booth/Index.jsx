@@ -1,38 +1,47 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
-import { useRef, useEffect, useState } from 'react';
-import { Camera, Download, RefreshCw, ArrowRight, Check } from 'lucide-react';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Camera, RefreshCw, ArrowRight, Check, FlipHorizontal, Timer, Aperture } from 'lucide-react';
+import NavBar from '@/Components/NavBar';
 
 export default function Booth({ auth }) {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const [stream, setStream] = useState(null);
+    const [isCameraFlipped, setIsCameraFlipped] = useState(true); // Mirrored by default
 
-    // 1. Lấy Config từ trang chọn Layout (Mặc định là 4 ảnh nếu không có)
+    // Layout configuration from localStorage
     const [layoutConfig] = useState(() => {
         if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('blu_session_layout');
+            // Try new key first, then fallback to old key
+            const saved = localStorage.getItem('blu_layout_config') || localStorage.getItem('blu_session_layout');
             return saved ? JSON.parse(saved) : { key: 'strip_4', frames: 4, name: 'Cinema' };
         }
         return { key: 'strip_4', frames: 4, name: 'Cinema' };
     });
 
-    // 2. State quản lý danh sách ảnh
-    // Tạo mảng rỗng có độ dài bằng số frames (vd: [null, null, null, null])
+    // Photo state
     const [photos, setPhotos] = useState(Array(layoutConfig.frames).fill(null));
-
-    // 3. State xác định đang chụp cho ô nào (Mặc định là ô 0)
     const [activeFrameIndex, setActiveFrameIndex] = useState(0);
-    const [countdown, setCountdown] = useState(null);
-    const [isFlashing, setIsFlashing] = useState(false);
 
-    // --- KHỞI ĐỘNG CAMERA ---
+    // Camera effects state
+    const [isFlashing, setIsFlashing] = useState(false);
+    const [countdown, setCountdown] = useState(null);
+    const [countdownDuration, setCountdownDuration] = useState(3);
+    const [isCapturing, setIsCapturing] = useState(false);
+
+    // Initialize camera
     useEffect(() => {
         let mediaStream = null;
+
         const startCamera = async () => {
             try {
                 mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: "user"
+                    },
                     audio: false,
                 });
                 setStream(mediaStream);
@@ -42,20 +51,52 @@ export default function Booth({ auth }) {
                 }
             } catch (err) {
                 console.error("Camera Error:", err);
-                alert("Không thể mở camera. Vui lòng cấp quyền truy cập!");
+                alert("Unable to access camera. Please grant camera permissions.");
             }
         };
 
         startCamera();
 
         return () => {
-            if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
         };
     }, []);
 
-    // --- HÀM CHỤP ẢNH ---
-    const capturePhoto = () => {
-        // 1. Hiệu ứng đếm ngược (Optional - ở đây làm nhanh nên bỏ qua đếm ngược dài)
+    // Countdown logic
+    const startCountdown = useCallback(() => {
+        return new Promise((resolve) => {
+            if (countdownDuration === 0) {
+                resolve();
+                return;
+            }
+
+            setIsCapturing(true);
+            let count = countdownDuration;
+            setCountdown(count);
+
+            const interval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    setCountdown(count);
+                } else {
+                    clearInterval(interval);
+                    setCountdown(null);
+                    resolve();
+                }
+            }, 1000);
+        });
+    }, [countdownDuration]);
+
+    // Capture photo
+    const capturePhoto = useCallback(async () => {
+        if (activeFrameIndex === -1 || isCapturing) return;
+
+        // Start countdown
+        await startCountdown();
+
+        // Flash effect
         setIsFlashing(true);
         setTimeout(() => setIsFlashing(false), 150);
 
@@ -63,69 +104,84 @@ export default function Booth({ auth }) {
         const canvas = canvasRef.current;
 
         if (video && canvas) {
-            // Setup Canvas
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
 
-            // Lật ảnh gương (Mirror)
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
+            // Mirror image if camera is flipped
+            if (isCameraFlipped) {
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+            }
+
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Lấy dữ liệu ảnh
             const imageSrc = canvas.toDataURL('image/jpeg', 0.9);
 
-            // Cập nhật vào mảng Photos tại vị trí activeFrameIndex
+            // Update photos array
             const newPhotos = [...photos];
             newPhotos[activeFrameIndex] = imageSrc;
             setPhotos(newPhotos);
 
-            // Tự động chuyển sang ô trống tiếp theo (nếu có)
+            // Save to localStorage for persistence
+            localStorage.setItem('blu_captured_photos', JSON.stringify(newPhotos));
+
+            // Auto-advance to next empty slot
             const nextEmptyIndex = newPhotos.findIndex(p => p === null);
             if (nextEmptyIndex !== -1) {
                 setActiveFrameIndex(nextEmptyIndex);
             } else {
-                // Nếu đã chụp full, bỏ focus (để user tự chọn nếu muốn chụp lại)
-                setActiveFrameIndex(-1);
+                setActiveFrameIndex(-1); // All frames captured
             }
         }
+
+        setIsCapturing(false);
+    }, [activeFrameIndex, isCapturing, isCameraFlipped, photos, startCountdown]);
+
+    // Handle frame click (for retake)
+    const handleFrameClick = (index) => {
+        setActiveFrameIndex(index);
     };
 
-    // --- XỬ LÝ LƯU (FINISH) ---
+    // Finish session
     const handleFinish = () => {
         if (photos.includes(null)) {
-            if (!confirm('Bạn chưa chụp đủ số tấm ảnh. Vẫn muốn lưu chứ?')) return;
+            if (!confirm('You haven\'t captured all frames. Continue anyway?')) return;
         }
 
-        // Gửi toàn bộ mảng ảnh lên Server (Bà cần update Controller để nhận mảng này sau)
-        // Hiện tại tạm thời lưu ảnh đầu tiên hoặc xử lý logic ghép ảnh (sẽ làm ở Phase sau)
-        // Demo: Redirect về trang Gallery
+        // Save final photos to localStorage
+        localStorage.setItem('blu_captured_photos', JSON.stringify(photos));
+        localStorage.setItem('blu_capture_time', new Date().toISOString());
+
         router.visit('/gallery');
     };
 
-    // Kiểm tra đã chụp đủ ảnh chưa
+    // Toggle camera flip
+    const toggleFlip = () => {
+        setIsCameraFlipped(prev => !prev);
+    };
+
     const isFull = !photos.includes(null);
+    const capturedCount = photos.filter(p => p !== null).length;
 
     return (
-        <AuthenticatedLayout user={auth.user} header={null}>
+        <>
             <Head title="Capture Session" />
 
             {/* Font Import */}
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
-                .font-serif { font-family: 'Playfair Display', serif; }
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
             `}</style>
 
-            <div className="min-h-screen bg-neutral-900 text-white flex flex-col md:flex-row overflow-hidden">
+            <div className="min-h-screen bg-neutral-900 text-white flex flex-col md:flex-row overflow-hidden font-sans">
 
-                {/* --- LEFT: LIVE CAMERA --- */}
+                {/* LEFT: Live Camera Section */}
                 <div className="flex-1 relative flex flex-col items-center justify-center p-6 bg-black">
 
-                    {/* Header nhỏ */}
+                    {/* Header */}
                     <div className="absolute top-6 left-6 z-20">
                         <h1 className="text-2xl font-bold tracking-tighter uppercase">
-                            Blu<span className="font-serif italic font-light text-neutral-400">Booth.</span>
+                            Blu<span className="font-serif italic font-normal text-neutral-400">Booth.</span>
                         </h1>
                         <p className="text-[10px] uppercase tracking-widest text-neutral-500 mt-1">
                             Session: {layoutConfig.name}
@@ -134,15 +190,52 @@ export default function Booth({ auth }) {
 
                     {/* Camera Viewport */}
                     <div className="relative w-full max-w-4xl aspect-video bg-neutral-800 rounded-sm overflow-hidden shadow-2xl ring-1 ring-neutral-700">
-                        {/* Flash Effect */}
-                        <div className={`absolute inset-0 bg-white z-50 pointer-events-none transition-opacity duration-75 ${isFlashing ? 'opacity-100' : 'opacity-0'}`}></div>
 
-                        {/* Status Overlay */}
+                        {/* Flash Effect Overlay */}
+                        <AnimatePresence>
+                            {isFlashing && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.075 }}
+                                    className="absolute inset-0 bg-white z-50 pointer-events-none"
+                                />
+                            )}
+                        </AnimatePresence>
+
+                        {/* Countdown Overlay */}
+                        <AnimatePresence>
+                            {countdown !== null && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 1.5 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.5 }}
+                                    className="absolute inset-0 bg-black/70 z-40 flex items-center justify-center"
+                                >
+                                    <motion.span
+                                        key={countdown}
+                                        initial={{ scale: 1.5, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        exit={{ scale: 0.5, opacity: 0 }}
+                                        className="text-8xl font-bold text-white font-serif"
+                                    >
+                                        {countdown}
+                                    </motion.span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Live Recording Indicator */}
                         <div className="absolute top-4 right-4 z-10">
-                            <span className="inline-flex items-center gap-2 px-3 py-1 bg-red-600/90 text-white text-[10px] font-bold uppercase tracking-widest rounded-full animate-pulse">
-                                <div className="w-2 h-2 bg-white rounded-full"></div>
-                                Live Rec
-                            </span>
+                            <motion.span
+                                animate={{ opacity: [1, 0.5, 1] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                                className="inline-flex items-center gap-2 px-3 py-1 bg-red-600/90 text-white text-[10px] font-bold uppercase tracking-widest rounded-full"
+                            >
+                                <div className="w-2 h-2 bg-white rounded-full" />
+                                Live
+                            </motion.span>
                         </div>
 
                         {activeFrameIndex !== -1 ? (
@@ -151,71 +244,116 @@ export default function Booth({ auth }) {
                                 autoPlay
                                 playsInline
                                 muted
-                                className="w-full h-full object-cover transform -scale-x-100"
+                                className={`w-full h-full object-cover transition-transform duration-300 ${isCameraFlipped ? '-scale-x-100' : ''}`}
                             />
                         ) : (
-                            // Màn hình chờ khi đã chụp xong hết
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-900 text-neutral-500">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="w-full h-full flex flex-col items-center justify-center bg-neutral-900 text-neutral-500"
+                            >
                                 <Check size={48} className="mb-4 text-green-500" />
                                 <p className="font-serif text-2xl italic text-white">Session Complete</p>
                                 <p className="text-xs uppercase tracking-widest mt-2">Tap a photo on the right to retake</p>
-                            </div>
+                            </motion.div>
                         )}
 
-                        {/* Guides */}
-                        <div className="absolute inset-0 pointer-events-none opacity-20">
-                            <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
-                            <div className="absolute left-1/2 top-0 h-full w-px bg-white"></div>
+                        {/* Composition Guides */}
+                        <div className="absolute inset-0 pointer-events-none opacity-15">
+                            <div className="absolute top-1/3 left-0 w-full h-px bg-white" />
+                            <div className="absolute top-2/3 left-0 w-full h-px bg-white" />
+                            <div className="absolute left-1/3 top-0 h-full w-px bg-white" />
+                            <div className="absolute left-2/3 top-0 h-full w-px bg-white" />
                         </div>
                     </div>
 
                     {/* Controls */}
-                    <div className="mt-8 flex items-center gap-8">
-                        {activeFrameIndex !== -1 && (
-                            <button
-                                onClick={capturePhoto}
-                                className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center hover:bg-white/10 transition-all active:scale-95 group"
+                    <div className="mt-8 flex items-center gap-6">
+
+                        {/* Countdown Selector */}
+                        <div className="flex items-center gap-2 text-neutral-400">
+                            <Timer size={16} />
+                            <select
+                                value={countdownDuration}
+                                onChange={(e) => setCountdownDuration(Number(e.target.value))}
+                                className="bg-neutral-800 border border-neutral-700 rounded px-3 py-2 text-xs uppercase tracking-widest text-white focus:outline-none focus:ring-1 focus:ring-white/30"
                             >
-                                <div className="w-16 h-16 bg-white rounded-full group-hover:scale-90 transition-transform"></div>
-                            </button>
+                                <option value={0}>Instant</option>
+                                <option value={3}>3 sec</option>
+                                <option value={5}>5 sec</option>
+                                <option value={10}>10 sec</option>
+                            </select>
+                        </div>
+
+                        {/* Shutter Button */}
+                        {activeFrameIndex !== -1 && (
+                            <motion.button
+                                onClick={capturePhoto}
+                                disabled={isCapturing}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center hover:bg-white/10 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <motion.div
+                                    animate={isCapturing ? { scale: [1, 0.8, 1] } : {}}
+                                    transition={{ duration: 0.5, repeat: isCapturing ? Infinity : 0 }}
+                                    className="w-16 h-16 bg-white rounded-full group-hover:scale-95 transition-transform flex items-center justify-center"
+                                >
+                                    <Aperture size={24} className="text-neutral-900" />
+                                </motion.div>
+                            </motion.button>
                         )}
+
+                        {/* Flip Button */}
+                        <motion.button
+                            onClick={toggleFlip}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            className={`p-3 rounded-full border transition-colors ${isCameraFlipped ? 'border-white/30 text-white' : 'border-neutral-600 text-neutral-400'}`}
+                        >
+                            <FlipHorizontal size={20} />
+                        </motion.button>
                     </div>
 
-                    {/* Helper Text */}
+                    {/* Status Text */}
                     <p className="mt-6 text-neutral-500 text-xs uppercase tracking-widest font-bold">
                         {activeFrameIndex !== -1
                             ? `Capturing Frame ${activeFrameIndex + 1} of ${layoutConfig.frames}`
                             : 'All frames captured'}
                     </p>
 
-                    <canvas ref={canvasRef} className="hidden"></canvas>
+                    <canvas ref={canvasRef} className="hidden" />
                 </div>
 
-                {/* --- RIGHT: FILM STRIP PREVIEW --- */}
-                <div className="w-full md:w-80 lg:w-96 bg-white border-l border-neutral-200 p-6 flex flex-col h-[30vh] md:h-screen overflow-y-auto">
+                {/* RIGHT: Film Strip Sidebar */}
+                <div className="w-full md:w-80 lg:w-96 bg-white text-neutral-900 border-l border-neutral-200 p-6 flex flex-col h-[35vh] md:h-screen overflow-y-auto">
 
                     <div className="mb-6 flex justify-between items-end">
                         <h3 className="text-neutral-900 font-bold uppercase tracking-widest text-xs">Film Strip</h3>
                         <span className="text-neutral-400 text-[10px] font-serif italic">
-                            {photos.filter(p => p).length} / {layoutConfig.frames}
+                            {capturedCount} / {layoutConfig.frames}
                         </span>
                     </div>
 
-                    {/* Dải ảnh (Layout) */}
+                    {/* Photo Frames */}
                     <div className="flex-1 space-y-4">
                         {photos.map((imgSrc, index) => (
-                            <div
+                            <motion.div
                                 key={index}
-                                onClick={() => setActiveFrameIndex(index)}
+                                onClick={() => handleFrameClick(index)}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
                                 className={`
                                     relative aspect-[3/2] w-full bg-neutral-100 cursor-pointer overflow-hidden transition-all duration-300 group
-                                    ${activeFrameIndex === index ? 'ring-2 ring-offset-2 ring-black shadow-xl scale-105 z-10' : 'hover:opacity-80 border border-neutral-200'}
+                                    ${activeFrameIndex === index
+                                        ? 'ring-2 ring-offset-2 ring-black shadow-xl scale-[1.02] z-10'
+                                        : 'hover:shadow-md border border-neutral-200'}
                                 `}
                             >
                                 {imgSrc ? (
                                     <>
-                                        <img src={imgSrc} alt={`Frame ${index}`} className="w-full h-full object-cover" />
-                                        {/* Overlay Retake */}
+                                        <img src={imgSrc} alt={`Frame ${index + 1}`} className="w-full h-full object-cover" />
+                                        {/* Retake Overlay */}
                                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                             <div className="flex items-center gap-2 text-white text-xs font-bold uppercase tracking-widest">
                                                 <RefreshCw size={14} /> Retake
@@ -229,33 +367,43 @@ export default function Booth({ auth }) {
                                     </div>
                                 )}
 
-                                {/* Số thứ tự góc */}
+                                {/* Frame Number Badge */}
                                 <div className="absolute top-2 left-2 w-5 h-5 bg-black/80 text-white text-[10px] font-bold flex items-center justify-center rounded-full">
                                     {index + 1}
                                 </div>
-                            </div>
+
+                                {/* Active Indicator */}
+                                {activeFrameIndex === index && (
+                                    <motion.div
+                                        layoutId="activeIndicator"
+                                        className="absolute bottom-2 right-2 w-2 h-2 bg-green-500 rounded-full"
+                                    />
+                                )}
+                            </motion.div>
                         ))}
                     </div>
 
                     {/* Footer Actions */}
                     <div className="mt-6 pt-6 border-t border-neutral-100">
-                        <button
+                        <motion.button
                             onClick={handleFinish}
-                            disabled={!isFull} // Chỉ cho finish khi chụp đủ (hoặc bỏ dòng này nếu muốn cho phép lưu thiếu)
+                            disabled={!isFull}
+                            whileHover={isFull ? { y: -2, scale: 1.02 } : {}}
+                            whileTap={isFull ? { scale: 0.98 } : {}}
                             className={`
-                                w-full py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest transition-all
+                                w-full py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest transition-all rounded-sm
                                 ${isFull
-                                    ? 'bg-black text-white hover:bg-neutral-800 shadow-lg transform hover:-translate-y-1'
+                                    ? 'bg-black text-white hover:bg-neutral-800 shadow-lg'
                                     : 'bg-neutral-100 text-neutral-400 cursor-not-allowed'}
                             `}
                         >
                             <span>Finish Session</span>
                             <ArrowRight size={14} />
-                        </button>
+                        </motion.button>
                     </div>
 
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </>
     );
 }

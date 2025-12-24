@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Blubooth | Liên hệ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Import font Poppins -->
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,500,600&display=swap" rel="stylesheet">
+  <!-- Import CSS chính từ styles.css -->
+  <link rel="stylesheet" href="../styles/styles.css">
+  <style>
+    /* Các biến CSS đã định nghĩa trong styles.css sẽ được sử dụng */
+
+    /* Style chung cho tiêu đề trang */
+    .contact-section {
+      text-align: center;
+      padding: 2rem 0;
+    }
+
+    .contact-section h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.2px;
+    }
+
+    /* Container cho layout 2 cột */
+    .contact-grid-container {
+      display: grid;
+      /* Mặc định là 2 cột bằng nhau trên màn hình lớn */
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem; /* Khoảng cách giữa 2 cột */
+      max-width: var(--max-content-width); /* Giới hạn độ rộng tối đa như các trang khác */
+      margin: 0 auto;
+      padding: 0 1rem; /* Padding ngang để không bị dính vào cạnh màn hình */
+    }
+
+    /* Style cho các khối nội dung bên trong grid */
+    .contact-block {
+      background: var(--pastel-beige); /* Nền màu pastel nhẹ nhàng */
+      border-radius: var(--radius-main); /* Bo góc mềm mại */
+      padding: 2.5rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.1); /* Đổ bóng rõ hơn */
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start; /* Căn trái nội dung trong khối */
+      transition: transform 0.2s ease-out, box-shadow 0.2s ease-out; /* Hiệu ứng hover */
+      text-align: left; /* Đảm bảo văn bản căn trái */
+    }
+
+    .contact-block:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    }
+
+    .contact-block h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #333; /* Tăng tương phản bằng màu tối hơn */
+      margin-bottom: 1.5rem; /* Khoảng cách dưới tiêu đề khối */
+      text-align: center; /* Căn giữa tiêu đề khối */
+      width: 100%; /* Đảm bảo tiêu đề chiếm hết chiều rộng để căn giữa */
+    }
+
+    /* Form liên hệ */
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      width: 100%; /* Form chiếm hết chiều rộng của khối */
+    }
+
+    .form-group {
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #333;
+      font-size: 1rem;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group textarea {
+      width: calc(100% - 20px); /* Điều chỉnh độ rộng cho padding */
+      padding: 0.8rem 10px;
+      border: 1px solid var(--pastel-lavender);
+      border-radius: 10px;
+      font-family: var(--font-main);
+      font-size: 1.05rem;
+      color: #222;
+      background-color: #fff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-group input[type="text"]:focus,
+    .form-group input[type="email"]:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--nav-active);
+      box-shadow: 0 0 0 3px rgba(225, 156, 166, 0.2);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .submit-button {
+      background: var(--button-bg);
+      color: var(--button-text);
+      font-weight: 600;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      border: none;
+      box-shadow: var(--button-shadow);
+      cursor: pointer;
+      padding: 0.9rem 1.5rem;
+      letter-spacing: .5px;
+      font-family: var(--font-main);
+      transition: background .19s, transform .16s, box-shadow .18s;
+      outline: none;
+      width: auto;
+      align-self: flex-end; /* Căn nút gửi sang phải */
+    }
+
+    .submit-button:hover,
+    .submit-button:focus {
+      background: var(--button-bg-hover);
+      transform: translateY(-3px) scale(1.01);
+      box-shadow: 0 8px 20px #e7e4fa5a;
+    }
+
+    /* Thông tin liên hệ */
+    .contact-info-list {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .contact-info-list p {
+        font-size: 1.1rem;
+        color: #222; /* Tăng tương phản */
+        line-height: 1.6;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+
+    .contact-info-list p strong {
+        color: #000;
+    }
+
+    /* Icon cho thông tin liên hệ - sử dụng SVG inline để đảm bảo đồng nhất */
+    .contact-info-list p svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--nav-active); /* Màu icon đồng nhất với nav-active */
+      flex-shrink: 0;
+    }
+
+
+    /* Responsive cho màn hình nhỏ */
+    @media (max-width: 768px) {
+      .contact-section h1 {
+        font-size: 1.8rem;
+      }
+      .contact-grid-container {
+        /* Trên màn hình nhỏ, chuyển sang 1 cột */
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        padding: 0 0.8rem;
+      }
+      .contact-block {
+        padding: 1.8rem;
+      }
+      .contact-block h2 {
+        font-size: 1.4rem;
+      }
+      .submit-button {
+        font-size: 1rem;
+        padding: 0.8rem 1.2rem;
+      }
+      .contact-info-list p {
+        font-size: 0.95rem;
+      }
+      .contact-info-list p svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .contact-section h1 {
+        font-size: 1.5rem;
+      }
+      .contact-block {
+        padding: 1.2rem;
+      }
+      .form-group input[type="text"],
+      .form-group input[type="email"],
+      .form-group textarea {
+        width: calc(100% - 16px);
+        padding: 0.7rem 8px;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="header-placeholder"></div>
+  <main>
+    <div class="content-container">
+      <section class="contact-section">
+        <h1 data-translate="contact_title">Liên hệ với chúng tôi</h1>
+        <div class="contact-grid-container">
+          <!-- Khối form liên hệ -->
+          <div class="contact-block">
+            <h2 data-translate="contact_send_message_title">Gửi lời nhắn cho chúng tôi</h2>
+            <form class="contact-form">
+              <div class="form-group">
+                <label for="name" data-translate="contact_name_label">Tên của bạn:</label>
+                <input type="text" id="name" name="name" required placeholder="Nhập tên của bạn">
+              </div>
+              <div class="form-group">
+                <label for="email" data-translate="contact_email_label">Email của bạn:</label>
+                <input type="email" id="email" name="email" required placeholder="Nhập email của bạn">
+              </div>
+              <div class="form-group">
+                <label for="message" data-translate="contact_message_label">Lời nhắn của bạn:</label>
+                <textarea id="message" name="message" required placeholder="Nhập lời nhắn của bạn"></textarea>
+              </div>
+              <button type="submit" class="submit-button" data-translate="contact_submit_btn">Gửi lời nhắn</button>
+            </form>
+          </div>
+
+          <!-- Khối thông tin liên hệ -->
+          <div class="contact-block">
+            <h2 data-translate="contact_details_title">Thông tin liên hệ</h2>
+            <div class="contact-info-list">
+                <p class="phone">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 15.5c-1.25 0-2.5-.22-3.66-.65-.45-.16-.98-.05-1.32.25L12.5 17c-2.77-1.37-5.12-3.72-6.5-6.5L7.9 8.48c.3-.34.4-.87.25-1.32-.43-1.16-.65-2.41-.65-3.66 0-.55-.45-1-1-1H3.5c-.55 0-1 .45-1 1C2.5 14.04 8.96 20.5 16.5 20.5c.55 0 1-.45 1-1V17c0-.55-.45-1-1-1h-1.5z"/></svg>
+                    <strong data-translate="contact_phone_label">Điện thoại:</strong> +84 901 234 567
+                </p>
+                <p class="email">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                    <strong data-translate="contact_email_info_label">Email:</strong> huynhkhanh2004@gmail.com
+                </p>
+                <p class="address">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c-.55 0-1 .45-1 1v1h2V3c0-.55-.45-1-1-1zm0 3c-3.87 0-7 3.13-7 7s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zm0 11c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm-1-8h2v5h-2z"/></svg>
+                    <strong data-translate="contact_address_label">Địa chỉ:</strong> Da Nang, Việt Nam
+                </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <div id="footer-placeholder"></div>
+  <script src="../scripts/layout-loader.js" defer></script>
+  <script>
+    // Đảm bảo translation.js chỉ chạy sau khi header đã load xong
+    window.addEventListener('DOMContentLoaded', function() {
+      // Đợi header/footer được inject xong
+      const checkHeader = setInterval(() => {
+        const langBtns = document.querySelectorAll('.lang-btn');
+        if (langBtns.length > 0) {
+          clearInterval(checkHeader);
+          // Nạp translation.js động
+          const script = document.createElement('script');
+          script.src = '../scripts/translation.js';
+          script.onload = function() {
+            // Gắn lại sự kiện click cho nút ngôn ngữ (nếu translation.js chưa tự gắn)
+            langBtns.forEach(btn => {
+              btn.onclick = function() {
+                const lang = btn.getAttribute('data-lang');
+                if (typeof setLanguage === 'function') setLanguage(lang);
+              };
+            });
+            // Áp dụng lại ngôn ngữ đã lưu
+            const savedLang = localStorage.getItem('blubooth_lang') || 'vi';
+            if (typeof setLanguage === 'function') setLanguage(savedLang);
+          };
+          document.body.appendChild(script);
+        }
+      }, 30);
+
+      // Hamburger toggle cho mobile nav
+      const checkNav = setInterval(() => {
+        const navToggle = document.getElementById('navToggle');
+        const navbar = document.getElementById('navbar');
+        if (navToggle && navbar) {
+          clearInterval(checkNav);
+          navToggle.addEventListener('click', function () {
+            navbar.classList.toggle('open');
+            navToggle.setAttribute('aria-expanded', navbar.classList.contains('open'));
+          });
+          // Fix: Close nav on blur only if it's open to prevent immediate close on click
+          navToggle.addEventListener('blur', function () {
+            setTimeout(() => {
+              if (navbar.classList.contains('open')) {
+                navbar.classList.remove('open');
+                navToggle.setAttribute('aria-expanded', 'false');
+              }
+            }, 240); // Small delay to allow click event to register
+          });
+        }
+      }, 30);
+
+      // Handle form submission (example)
+      document.querySelector('.contact-form').addEventListener('submit', function(event) {
+        event.preventDefault(); // Ngăn chặn gửi form mặc định
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const message = document.getElementById('message').value;
+
+        // In ra console để kiểm tra, trong thực tế sẽ gửi dữ liệu đi
+        console.log('Tên:', name);
+        console.log('Email:', email);
+        console.log('Lời nhắn:', message);
+
+        alert('Cảm ơn bạn, lời nhắn của bạn đã được gửi đi!');
+        this.reset(); // Reset form sau khi gửi
+      });
+    });
+  </script>
+</body>
+</html>
