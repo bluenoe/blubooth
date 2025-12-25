@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera - Blubooth</title>
+    <link rel="stylesheet" href="../styles/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Canvas Page Specific Styles */
+        .canvas-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: var(--spacing-lg) auto 0 auto;
+            background: linear-gradient(135deg, var(--container-gradient-start) 0%, var(--container-gradient-end) 100%);
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--radius-main);
+            box-shadow: var(--container-shadow);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: var(--spacing-xl);
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: var(--spacing-xl);
+            min-height: 70vh;
+            transition: var(--transition);
+            backdrop-filter: blur(10px);
+        }
+
+        .canvas-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--container-overlay-color);
+            border-radius: inherit;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .canvas-container > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Left Section - Camera & Controls */
+        .camera-section {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        .video-container {
+            position: relative;
+            background: var(--dark);
+            border-radius: var(--radius-card);
+            overflow: hidden;
+            aspect-ratio: 4/3;
+            box-shadow: var(--card-shadow);
+            border: 2px solid var(--tertiary);
+        }
+
+        #videoFeed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: var(--transition);
+        }
+
+        .countdown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 6rem;
+            font-weight: 700;
+            color: var(--white);
+            z-index: 10;
+            animation: pulse 1s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: var(--spacing-lg);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .shutter-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: 4px solid var(--white);
+            box-shadow: var(--button-shadow), inset 0 2px 8px rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shutter-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 32px rgba(141, 188, 199, 0.4), 0 4px 16px rgba(164, 204, 217, 0.3), inset 0 2px 8px rgba(255, 255, 255, 0.4);
+        }
+
+        .shutter-btn:active {
+            transform: scale(0.95);
+        }
+
+        .shutter-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .shutter-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60%;
+            height: 60%;
+            background: var(--white);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: var(--transition);
+        }
+
+        .shutter-btn:hover::before {
+            width: 70%;
+            height: 70%;
+        }
+
+        .flip-btn, .download-btn, .edit-btn {
+            background: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            border-radius: var(--radius-button);
+            padding: var(--spacing-md) var(--spacing-lg);
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--button-shadow);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .flip-btn:hover, .download-btn:hover, .edit-btn:hover {
+            background: var(--button-bg-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(141, 188, 199, 0.3), 0 4px 12px rgba(164, 204, 217, 0.2);
+        }
+
+        .download-btn, .edit-btn {
+            display: none;
+        }
+
+        .countdown-selector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-xs);
+            margin: var(--spacing-sm) 0;
+        }
+        
+        .countdown-selector label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .countdown-selector select {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border: 2px solid var(--tertiary);
+            border-radius: var(--radius-button);
+            background: var(--white);
+            color: var(--text-main);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            min-width: 100px;
+            font-family: var(--font-main);
+        }
+        
+        .countdown-selector select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(141, 188, 199, 0.1);
+        }
+        
+        .countdown-selector select:hover {
+            border-color: var(--primary);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+        }
+
+        /* Right Section - Photo Strip Preview */
+        .preview-section {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        .preview-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-main);
+            text-align: center;
+            margin: 0;
+        }
+
+        .photo-strip {
+            background: var(--white);
+            border-radius: var(--radius-card);
+            padding: var(--spacing-lg);
+            box-shadow: var(--card-shadow);
+            border: 2px solid var(--tertiary);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            min-height: 350px;
+        }
+
+        .photo-frames {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .photo-frame {
+            background: var(--accent);
+            border: 2px dashed var(--secondary);
+            border-radius: var(--radius-img);
+            aspect-ratio: 4/3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .photo-frame.filled {
+            border: 2px solid var(--primary);
+            background: transparent;
+        }
+
+        .photo-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: calc(var(--radius-img) - 2px);
+        }
+
+        .photo-frame.next {
+            border-color: var(--primary);
+            background: var(--tertiary);
+            animation: nextFrame 2s ease-in-out infinite;
+        }
+
+        @keyframes nextFrame {
+            0%, 100% { border-color: var(--primary); }
+            50% { border-color: var(--secondary); }
+        }
+
+        /* Grid layout for 6-frame option */
+        .photo-frames.grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: var(--spacing-xs);
+        }
+
+        .strip-footer {
+            background: var(--white);
+            padding: var(--spacing-sm);
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+            border-top: 1px solid var(--tertiary);
+            margin-top: var(--spacing-sm);
+        }
+
+        .progress-indicator {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-md);
+        }
+
+        .progress-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--tertiary);
+            transition: var(--transition);
+        }
+
+        .progress-dot.active {
+            background: var(--primary);
+            transform: scale(1.2);
+        }
+
+        .progress-dot.completed {
+            background: var(--secondary);
+        }
+
+        /* Hidden canvas for image capture */
+        #captureCanvas {
+            display: none;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 1024px) {
+            .canvas-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto;
+                gap: var(--spacing-lg);
+                padding: var(--spacing-lg);
+            }
+
+            .preview-section {
+                order: -1;
+            }
+
+            .photo-strip {
+                min-height: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .canvas-container {
+                padding: var(--spacing-md);
+                margin: var(--spacing-md) auto 0 auto;
+            }
+
+            .camera-controls {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: var(--spacing-md);
+            }
+
+            .action-buttons {
+                display: flex;
+                gap: var(--spacing-sm);
+                width: 100%;
+                justify-content: center;
+            }
+
+            .flip-btn, .download-btn, .edit-btn {
+                min-height: 44px;
+                padding: var(--spacing-sm) var(--spacing-md);
+                font-size: 0.9rem;
+            }
+
+            .shutter-btn {
+                width: 80px;
+                height: 80px;
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .countdown-overlay {
+                font-size: 4rem;
+            }
+
+            .video-container {
+                max-width: 100%;
+                aspect-ratio: 4/3;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .canvas-container {
+                padding: var(--spacing-sm);
+                gap: var(--spacing-md);
+            }
+
+            .preview-title {
+                font-size: 1.2rem;
+                text-align: center;
+            }
+
+            .photo-strip {
+                padding: var(--spacing-sm);
+                min-height: 200px;
+            }
+
+            .shutter-btn {
+                width: 70px;
+                height: 70px;
+            }
+
+            .flip-btn, .download-btn, .edit-btn {
+                min-height: 48px;
+                padding: var(--spacing-sm);
+                font-size: 0.85rem;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .action-buttons {
+                gap: var(--spacing-xs);
+            }
+
+            .camera-controls {
+                gap: var(--spacing-sm);
+            }
+
+            .video-container {
+                border-radius: var(--border-radius-md);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+    
+    <main>
+        <div class="canvas-container">
+            <!-- Left Section - Camera & Controls -->
+            <div class="camera-section">
+                <div class="video-container">
+                    <video id="videoFeed" autoplay muted playsinline></video>
+                    <div class="countdown-overlay" id="countdownOverlay">3</div>
+                </div>
+                
+                <div class="camera-controls">
+                    <button class="flip-btn" id="flipBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M15.5 15.38V8.62L18.88 12l-3.38 3.38M9.5 8.62v6.76L6.12 12 9.5 8.62M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                        </svg>
+                        <span data-translate="canvas_flip_btn">Lật Ảnh</span>
+                    </button>
+                    
+                    <div class="countdown-selector">
+                        <label for="countdownSelect" data-translate="canvas_countdown_label">Đếm ngược:</label>
+                        <select id="countdownSelect">
+                            <option value="0" data-translate="canvas_0_seconds">0 giây</option>
+                            <option value="3" selected data-translate="canvas_3_seconds">3 giây</option>
+                            <option value="5" data-translate="canvas_5_seconds">5 giây</option>
+                            <option value="10" data-translate="canvas_10_seconds">10 giây</option>
+                        </select>
+                    </div>
+                    
+                    <button class="shutter-btn" id="shutterBtn" title="Chụp ảnh"></button>
+                    
+                    <div class="action-buttons">
+                        <button class="download-btn" id="downloadBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                            </svg>
+                            <span data-translate="canvas_download_btn">Tải Xuống</span>
+                        </button>
+                        
+                        <button class="edit-btn" id="editBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                            </svg>
+                            <span data-translate="canvas_edit_btn">Chỉnh Sửa</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Section - Photo Strip Preview -->
+            <div class="preview-section">
+                <h2 class="preview-title" id="previewTitle" data-translate="canvas_layout_title">Bố Cục Ảnh</h2>
+                
+                <div class="photo-strip" id="photoStrip">
+                    <div class="photo-frames" id="photoFrames">
+                        <!-- Photo frames will be dynamically generated here -->
+                    </div>
+                    <div class="strip-footer">Blubooth</div>
+                </div>
+                
+                <div class="progress-indicator" id="progressIndicator">
+                    <!-- Progress dots will be dynamically generated here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="footer-placeholder"></div>
+    
+    <!-- Hidden canvas for image capture -->
+    <canvas id="captureCanvas"></canvas>
+
+    <script src="../scripts/layout-loader.js" defer></script>
+    <script>
+        // Global state variables
+        let selectedLayout = null;
+        let isCameraFlipped = false;
+        let currentFrameIndex = 0;
+        let totalFrames = 0;
+        let videoStream = null;
+        let countdownDuration = 3; // Default countdown duration
+        
+        // DOM elements
+        const videoFeed = document.getElementById('videoFeed');
+        const shutterBtn = document.getElementById('shutterBtn');
+        const flipBtn = document.getElementById('flipBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const editBtn = document.getElementById('editBtn');
+        const countdownOverlay = document.getElementById('countdownOverlay');
+        const countdownSelect = document.getElementById('countdownSelect');
+        const photoFrames = document.getElementById('photoFrames');
+        const progressIndicator = document.getElementById('progressIndicator');
+        const previewTitle = document.getElementById('previewTitle');
+        const captureCanvas = document.getElementById('captureCanvas');
+        
+        // Layout configurations
+        const layoutConfigs = {
+            'layout_strip_2': { frames: 2, name: '2 Khung Dọc', layout: 'vertical' },
+            'layout_strip_3': { frames: 3, name: '3 Khung Dọc', layout: 'vertical' },
+            'layout_strip_4': { frames: 4, name: '4 Khung Dọc', layout: 'vertical' }
+        };
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+            loadHeaderFooter();
+        });
+        
+        function initializeApp() {
+            // Read layout from localStorage
+            selectedLayout = localStorage.getItem('selectedLayout') || 'layout_strip_3';
+            
+            // If no layout is selected, redirect to choose layout page
+            if (!localStorage.getItem('selectedLayout')) {
+                alert('Vui lòng chọn bố cục trước khi chụp ảnh.');
+                window.location.href = 'chooseLayout.html';
+                return;
+            }
+            
+            // Generate photo strip based on selected layout
+            generatePhotoStrip();
+            
+            // Initialize webcam
+            initializeWebcam();
+        }
+        
+        function generatePhotoStrip() {
+            const config = layoutConfigs[selectedLayout] || layoutConfigs['layout_strip_4'];
+            totalFrames = config.frames;
+            
+            // Update title
+            previewTitle.textContent = config.name;
+            
+            // Clear existing frames
+            photoFrames.innerHTML = '';
+            progressIndicator.innerHTML = '';
+            
+            // Apply grid layout if needed
+            if (config.layout === 'grid') {
+                photoFrames.classList.add('grid-layout');
+            } else {
+                photoFrames.classList.remove('grid-layout');
+            }
+            
+            // Generate photo frames
+            for (let i = 0; i < totalFrames; i++) {
+                const frame = document.createElement('div');
+                frame.className = 'photo-frame';
+                frame.id = `frame-${i}`;
+                frame.textContent = `Ảnh ${i + 1}`;
+                photoFrames.appendChild(frame);
+                
+                // Generate progress dots
+                const dot = document.createElement('div');
+                dot.className = 'progress-dot';
+                dot.id = `dot-${i}`;
+                progressIndicator.appendChild(dot);
+            }
+            
+            // Mark first frame as next
+            updateNextFrame();
+        }
+        
+        async function initializeWebcam() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user'
+                    },
+                    audio: false
+                });
+                
+                videoFeed.srcObject = videoStream;
+                videoFeed.onloadedmetadata = () => {
+                    videoFeed.play();
+                };
+            } catch (error) {
+                console.error('Error accessing webcam:', error);
+                alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập camera và thử lại.');
+            }
+        }
+        
+        function setupEventListeners() {
+            // Shutter button
+            shutterBtn.addEventListener('click', handleShutter);
+            
+            // Flip button
+            flipBtn.addEventListener('click', handleFlip);
+            
+            // Download button
+            downloadBtn.addEventListener('click', handleDownload);
+            
+            // Edit button
+            editBtn.addEventListener('click', handleEdit);
+            
+            // Countdown selector
+            countdownSelect.addEventListener('change', handleCountdownChange);
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space' && !shutterBtn.disabled) {
+                    e.preventDefault();
+                    handleShutter();
+                } else if (e.code === 'KeyF') {
+                    e.preventDefault();
+                    handleFlip();
+                }
+            });
+        }
+        
+        async function handleShutter() {
+            if (currentFrameIndex >= totalFrames) return;
+            
+            shutterBtn.disabled = true;
+            
+            // Start countdown
+            await startCountdown();
+            
+            // Capture image
+            captureImage();
+            
+            // Update UI
+            currentFrameIndex++;
+            updateProgress();
+            updateNextFrame();
+            
+            // Check if all frames are captured
+            if (currentFrameIndex >= totalFrames) {
+                shutterBtn.style.display = 'none';
+                downloadBtn.style.display = 'flex';
+                editBtn.style.display = 'flex';
+                saveImagesToSession();
+            } else {
+                shutterBtn.disabled = false;
+            }
+        }
+        
+        function handleFlip() {
+            isCameraFlipped = !isCameraFlipped;
+            
+            if (isCameraFlipped) {
+                videoFeed.style.transform = 'scaleX(-1)';
+            } else {
+                videoFeed.style.transform = 'scaleX(1)';
+            }
+        }
+        
+        function handleEdit() {
+            // Navigate to customize.html
+            window.location.href = 'customize.html';
+        }
+        
+        function saveImagesToSession() {
+            const capturedImages = [];
+            
+            // Get all captured images from photo frames
+            for (let i = 0; i < currentFrameIndex; i++) {
+                const frame = document.getElementById(`frame-${i}`);
+                const img = frame.querySelector('img');
+                if (img) {
+                    capturedImages.push(img.src);
+                }
+            }
+            
+            // Save to sessionStorage for customize.html with both keys for compatibility
+            sessionStorage.setItem('capturedImages', JSON.stringify(capturedImages));
+            sessionStorage.setItem('capturedPhotos', JSON.stringify(capturedImages));
+            sessionStorage.setItem('selectedLayout', selectedLayout);
+            sessionStorage.setItem('captureTime', new Date().toISOString());
+            
+            console.log('Saved', capturedImages.length, 'images to sessionStorage');
+        }
+        
+        async function handleDownload() {
+            try {
+                const photoStrip = document.getElementById('photoStrip');
+                const canvas = await html2canvas(photoStrip, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true
+                });
+                
+                // Create a new canvas to add black border
+                const finalCanvas = document.createElement('canvas');
+                const finalCtx = finalCanvas.getContext('2d');
+                
+                finalCanvas.width = canvas.width;
+                finalCanvas.height = canvas.height;
+                
+                // Fill with white background
+                finalCtx.fillStyle = '#ffffff';
+                finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+                
+                // Draw the original canvas
+                finalCtx.drawImage(canvas, 0, 0);
+                
+                // Add black border (7px thick)
+                finalCtx.strokeStyle = '#000000';
+                finalCtx.lineWidth = 7;
+                finalCtx.strokeRect(3.5, 3.5, finalCanvas.width - 7, finalCanvas.height - 7);
+                
+                // Create professional filename with current date
+                const now = new Date();
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear();
+                const filename = `blubooth-${day}-${month}-${year}.jpg`;
+                
+                // Create download link
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = finalCanvas.toDataURL('image/jpeg', 0.9);
+                link.click();
+            } catch (error) {
+                console.error('Error generating download:', error);
+                alert('Có lỗi xảy ra khi tạo file tải xuống. Vui lòng thử lại.');
+            }
+        }
+        
+        function handleCountdownChange() {
+            countdownDuration = parseInt(countdownSelect.value);
+        }
+        
+        function startCountdown() {
+            return new Promise((resolve) => {
+                if (countdownDuration === 0) {
+                    resolve();
+                    return;
+                }
+                
+                let count = countdownDuration;
+                countdownOverlay.style.display = 'flex';
+                countdownOverlay.textContent = count;
+                
+                const countInterval = setInterval(() => {
+                    count--;
+                    
+                    if (count > 0) {
+                        countdownOverlay.textContent = count;
+                    } else {
+                        clearInterval(countInterval);
+                        countdownOverlay.style.display = 'none';
+                        resolve();
+                    }
+                }, 1000);
+            });
+        }
+        
+        function captureImage() {
+            const canvas = captureCanvas;
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size to match video
+            canvas.width = videoFeed.videoWidth;
+            canvas.height = videoFeed.videoHeight;
+            
+            // Handle flip transformation
+            if (isCameraFlipped) {
+                ctx.save();
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            } else {
+                ctx.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
+            }
+            
+            // Get image data and set to frame
+            const imageData = canvas.toDataURL('image/jpeg', 0.9);
+            const frame = document.getElementById(`frame-${currentFrameIndex}`);
+            
+            frame.innerHTML = `<img src="${imageData}" alt="Captured photo ${currentFrameIndex + 1}">`;
+            frame.classList.add('filled');
+            frame.classList.remove('next');
+        }
+        
+        function updateProgress() {
+            const dot = document.getElementById(`dot-${currentFrameIndex}`);
+            if (dot) {
+                dot.classList.add('completed');
+                dot.classList.remove('active');
+            }
+        }
+        
+        function updateNextFrame() {
+            // Remove previous next indicator
+            document.querySelectorAll('.photo-frame.next').forEach(frame => {
+                frame.classList.remove('next');
+            });
+            
+            document.querySelectorAll('.progress-dot.active').forEach(dot => {
+                dot.classList.remove('active');
+            });
+            
+            // Add next indicator to current frame
+            if (currentFrameIndex < totalFrames) {
+                const nextFrame = document.getElementById(`frame-${currentFrameIndex}`);
+                const nextDot = document.getElementById(`dot-${currentFrameIndex}`);
+                
+                if (nextFrame) nextFrame.classList.add('next');
+                if (nextDot) nextDot.classList.add('active');
+            }
+        }
+        
+        function loadHeaderFooter() {
+            // Load translation script after header is loaded
+            const checkHeader = setInterval(() => {
+                const langBtns = document.querySelectorAll('.lang-btn');
+                if (langBtns.length > 0) {
+                    clearInterval(checkHeader);
+                    const script = document.createElement('script');
+                    script.src = '../scripts/translation.js';
+                    script.onload = function() {
+                        langBtns.forEach(btn => {
+                            btn.onclick = function() {
+                                const lang = btn.getAttribute('data-lang');
+                                if (typeof setLanguage === 'function') setLanguage(lang);
+                            };
+                        });
+                        const savedLang = localStorage.getItem('blubooth_lang') || 'vi';
+                        if (typeof setLanguage === 'function') setLanguage(savedLang);
+                    };
+                    document.body.appendChild(script);
+                }
+            }, 30);
+            
+            // Mobile navigation toggle
+            const checkNav = setInterval(() => {
+                const navToggle = document.getElementById('navToggle');
+                const navbar = document.getElementById('navbar');
+                if (navToggle && navbar) {
+                    clearInterval(checkNav);
+                    navToggle.addEventListener('click', function () {
+                        navbar.classList.toggle('open');
+                        navToggle.setAttribute('aria-expanded', navbar.classList.contains('open'));
+                    });
+                    navToggle.addEventListener('blur', function () {
+                        setTimeout(() => {
+                            navbar.classList.remove('open');
+                            navToggle.setAttribute('aria-expanded', 'false');
+                        }, 240);
+                    });
+                }
+            }, 30);
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>

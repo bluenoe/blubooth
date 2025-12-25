@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customize Your Photo - Blubooth</title>
+    <link rel="stylesheet" href="../styles/styles.css">
+    <link rel="stylesheet" href="../styles/customize.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+    
+    <main>
+        <div class="customize-container">
+            <h1 class="page-title" data-translate="customize_page_title">Customize your photo</h1>
+            
+            <div class="customize-layout">
+                <!-- Left Panel - Customization Options -->
+                <div class="options-panel">
+                    <!-- Photo Upload -->
+                    <div class="option-section">
+                        <h3 class="option-title" data-translate="customize_upload_title">UPLOAD PHOTOS</h3>
+                        <div class="upload-container">
+                            <input type="file" id="photoUpload" accept="image/*" multiple style="display: none;">
+                            <button class="btn btn-upload" id="uploadBtn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M7 10L12 5L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M12 5V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span data-translate="customize_upload_btn">Upload Photos</span>
+                            </button>
+                            <div class="upload-info">
+                                <p data-translate="customize_upload_info">Select multiple photos from your device</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Layout selection removed -->
+                    
+                    <!-- Frame Selection -->
+                    <div class="option-section">
+                        <h3 class="option-title" data-translate="customize_frame_title">FRAME</h3>
+                        <div class="frame-grid" id="frameGrid">
+                            <!-- Frame thumbnails will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <!-- FRAME COLOR FUNCTIONALITY - TEMPORARILY DISABLED -->
+                    <!-- Background Color (Frame Color) -->
+                    <!-- <div class="option-section" id="backgroundColorSection" style="display: none;">
+                        <h3 class="option-title">BACKGROUND COLOR</h3>
+                        <div class="circular-color-picker-container">
+                            <div class="circular-color-picker" id="circularColorPicker" title="Click to choose background color">
+                                <div class="color-wheel">
+                                    <div class="color-segment" style="--color: #FF6B6B; --angle: 0deg;"></div>
+                                    <div class="color-segment" style="--color: #4ECDC4; --angle: 60deg;"></div>
+                                    <div class="color-segment" style="--color: #45B7D1; --angle: 120deg;"></div>
+                                    <div class="color-segment" style="--color: #96CEB4; --angle: 180deg;"></div>
+                                    <div class="color-segment" style="--color: #FECA57; --angle: 240deg;"></div>
+                                    <div class="color-segment" style="--color: #FF9FF3; --angle: 300deg;"></div>
+                                </div>
+                                <div class="current-color-preview" id="currentColorPreview"></div>
+                            </div>
+                            <span class="color-picker-label">Choose background color</span>
+                        </div>
+                    </div> -->
+                    
+                    <!-- Logo Options -->
+                    <div class="option-section">
+                        <h3 class="option-title" data-translate="customize_logo_title">LOGO</h3>
+                        <div class="logo-options">
+                            <label class="checkbox-option">
+                                <input type="checkbox" id="showLogo" checked>
+                                <span class="checkmark"></span>
+                                <span data-translate="customize_show_logo">Show Logo</span>
+                            </label>
+                            <div class="logo-language-selector">
+                                <label data-translate="customize_language_label">Language:</label>
+                                <select id="logoLanguage">
+                                    <option value="en">English - BLUBOOTH</option>
+                                    <option value="zh">中文 - 布鲁布斯</option>
+                                    <option value="ko">한국어 - 블루부스</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Time Display -->
+                    <div class="option-section">
+                        <h3 class="option-title" data-translate="customize_time_title">TIME</h3>
+                        <div class="time-options">
+                            <label class="checkbox-option">
+                                <input type="checkbox" id="showTime">
+                                <span class="checkmark"></span>
+                                <span data-translate="customize_show_time">Show Time</span>
+                            </label>
+                            <div class="time-format-selector">
+                                <label data-translate="customize_format_label">Format:</label>
+                                <select id="timeFormat">
+                                    <option value="date">Date Only (DD/MM/YYYY)</option>
+                                    <option value="datetime">Date & Time (DD/MM/YYYY HH:MM:SS)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" id="resetBtn" data-translate="customize_reset_btn">Đặt Lại</button>
+                        <button class="btn btn-primary" id="downloadBtn" data-translate="customize_download_btn">Tải Xuống Ảnh</button>
+                    </div>
+                </div>
+                
+                <!-- Right Panel - Photo Preview -->
+                <div class="preview-panel">
+                    <div class="photo-container" id="photoContainer">
+                        <div class="photo-frame-wrapper" id="photoFrameWrapper">
+                            <!-- Captured photos will be displayed here -->
+                            <div class="photo-strip" id="photoStrip">
+                                <!-- Photos from canvas.html will be loaded here -->
+                            </div>
+                            
+                            <!-- Frame overlay -->
+                            <div class="frame-overlay" id="frameOverlay"></div>
+                            
+                            <!-- Logo overlay -->
+                            <div class="logo-overlay" id="logoOverlay">
+                                <span id="logoText">BLUBOOTH</span>
+                            </div>
+                            
+                            <!-- Time overlay -->
+                            <div class="time-overlay" id="timeOverlay">
+                                <span id="timeText"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="footer-placeholder"></div>
+    
+    <!-- Hidden canvas for final image generation -->
+    <canvas id="finalCanvas" style="display: none;"></canvas>
+    
+    <!-- FRAME COLOR FUNCTIONALITY - TEMPORARILY DISABLED -->
+    <!-- Color Picker Modal -->
+    <!-- <div id="colorPickerModal" class="color-picker-modal" style="display: none;">
+        <div class="color-picker-modal-content">
+            <div class="color-picker-modal-header">
+                <h3>Choose Background Color</h3>
+                <button class="color-picker-close-btn" onclick="closeColorPickerModal()">&times;</button>
+            </div>
+            <div class="color-picker-body">
+                <div class="color-wheel-large">
+                    <canvas id="colorWheel" width="300" height="300"></canvas>
+                    <div class="color-wheel-cursor" id="colorWheelCursor"></div>
+                </div>
+                <div class="color-controls">
+                    <div class="color-input-group">
+                        <label for="hexColorInput">Hex Color:</label>
+                        <input type="text" id="hexColorInput" placeholder="#FFFFFF" maxlength="7">
+                    </div>
+                    <div class="color-sliders">
+                        <div class="slider-group">
+                            <label for="redSlider">R:</label>
+                            <input type="range" id="redSlider" min="0" max="255" value="255">
+                            <span id="redValue">255</span>
+                        </div>
+                        <div class="slider-group">
+                            <label for="greenSlider">G:</label>
+                            <input type="range" id="greenSlider" min="0" max="255" value="255">
+                            <span id="greenValue">255</span>
+                        </div>
+                        <div class="slider-group">
+                            <label for="blueSlider">B:</label>
+                            <input type="range" id="blueSlider" min="0" max="255" value="255">
+                            <span id="blueValue">255</span>
+                        </div>
+                    </div>
+                    <div class="color-preview">
+                        <div class="preview-box" id="colorPreviewBox"></div>
+                        <span>Selected Color</span>
+                    </div>
+                </div>
+            </div>
+            <div class="color-picker-controls">
+                <button class="btn btn-secondary" onclick="closeColorPickerModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="applyColorSelection()">Apply</button>
+            </div>
+        </div>
+    </div> -->
+    
+    <!-- Image Crop Modal -->
+    <div id="cropModal" class="crop-modal" style="display: none;">
+        <div class="crop-modal-content">
+            <div class="crop-modal-header">
+                <h3 data-translate="customize_crop_title">Cắt Ảnh</h3>
+                <button class="crop-close-btn" onclick="closeCropModal()">&times;</button>
+            </div>
+            <div class="crop-container">
+                <canvas id="cropCanvas"></canvas>
+                <div class="crop-overlay">
+                    <div class="crop-selection" id="cropSelection">
+                        <div class="crop-handle crop-handle-nw"></div>
+                        <div class="crop-handle crop-handle-ne"></div>
+                        <div class="crop-handle crop-handle-sw"></div>
+                        <div class="crop-handle crop-handle-se"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="crop-controls">
+                <button class="btn btn-secondary" onclick="closeCropModal()" data-translate="customize_cancel_btn">Hủy</button>
+                <button class="btn btn-primary" onclick="applyCrop()" data-translate="customize_apply_btn">Áp Dụng</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modular JavaScript Architecture -->
+    <script src="../scripts/layout-loader.js" defer></script>
+    <!-- Core state management and configurations -->
+    <script src="../scripts/core-state.js" defer></script>
+    <!-- Photo loading, display, and management -->
+    <script src="../scripts/photo-manager.js" defer></script>
+    <!-- Frame selection and editing tools -->
+    <script src="../scripts/frame-editor.js" defer></script>
+    <!-- Image export and download functionality -->
+    <script src="../scripts/export-manager.js" defer></script>
+    <!-- Main application initialization -->
+    <script src="../scripts/customize-app.js" defer></script>
+</body>
+</html>

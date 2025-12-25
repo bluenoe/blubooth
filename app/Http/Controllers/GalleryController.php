@@ -11,15 +11,17 @@ class GalleryController extends Controller
 {
     public function index()
     {
-        // Lấy ảnh của user, phân trang 12 tấm mỗi lần load
+        // Only fetch photo strips (final composite images)
         $photos = Photo::where('user_id', auth()->id())
+            ->where('type', 'strip')
             ->latest()
-            ->paginate(12);
+            ->paginate(20);
 
         return Inertia::render('Gallery/Index', [
             'photos' => $photos
         ]);
     }
+
 
     public function destroy($id)
     {

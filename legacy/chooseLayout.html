@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chọn Bố Cục - Blubooth</title>
+    <link rel="stylesheet" href="../styles/styles.css">
+    <style>
+        /* Additional CSS Variables for Layout Page */
+        :root {
+            --primary-rgb: 141, 188, 199;
+            --container-overlay-color: rgba(var(--primary-rgb), 0.05);
+        }
+        
+        /* Modern Layout Selection Styles */
+        body {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--secondary) 50%, var(--tertiary) 100%);
+            min-height: 100vh;
+        }
+
+        .layout-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 2rem auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1), 0 8px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 3rem 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .layout-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--container-overlay-color);
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        .layout-container > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        .layout-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: #000000;
+            text-align: center;
+            letter-spacing: -1px;
+            line-height: 1.1;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 3rem;
+        }
+
+        .layout-option {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08), 0 4px 15px rgba(0, 0, 0, 0.04);
+            border: 2px solid transparent;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transform-origin: center;
+        }
+
+        .layout-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            opacity: 0;
+            transition: all 0.4s ease;
+            border-radius: inherit;
+        }
+
+        .layout-option > * {
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .layout-option:hover {
+            transform: translateY(-12px) scale(1.03);
+            box-shadow: 0 20px 60px rgba(var(--primary-rgb), 0.2), 0 10px 30px rgba(var(--primary-rgb), 0.15);
+            border-color: var(--primary);
+        }
+
+        .layout-option:hover::before {
+            opacity: 0.05;
+        }
+
+        .layout-option:hover .layout-name {
+            color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .layout-option.selected {
+            border-color: var(--primary);
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 25px 70px rgba(var(--primary-rgb), 0.25), 0 12px 35px rgba(var(--primary-rgb), 0.2);
+        }
+
+        .layout-option.selected::before {
+            opacity: 0.08;
+        }
+
+        .layout-option.selected .layout-name {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .layout-option.selected .layout-preview {
+            border-color: var(--primary);
+            box-shadow: 0 8px 25px rgba(var(--primary-rgb), 0.2);
+        }
+
+        .layout-preview {
+            width: 140px;
+            height: 180px;
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border-radius: 16px;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .layout-frames {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            padding: 12px;
+        }
+
+        .layout-frame {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 8px;
+            flex: 1;
+            opacity: 0.9;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .layout-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+            border-radius: inherit;
+        }
+
+        .layout-grid-frames {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 3px;
+            flex: 1;
+            padding: 12px;
+        }
+
+        .layout-footer {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
+        .layout-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-align: center;
+            transition: all 0.3s ease;
+            letter-spacing: -0.5px;
+        }
+
+        .layout-description {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            text-align: center;
+            line-height: 1.5;
+            font-weight: 500;
+            max-width: 250px;
+        }
+
+        .confirm-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: #ffffff;
+            font-weight: 700;
+            border-radius: 16px;
+            font-size: 1.125rem;
+            border: none;
+            box-shadow: 0 8px 30px rgba(var(--primary-rgb), 0.3), 0 4px 15px rgba(var(--primary-rgb), 0.2);
+            cursor: pointer;
+            padding: 1rem 2.5rem;
+            letter-spacing: 0.5px;
+            font-family: inherit;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            outline: none;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            opacity: 0.4;
+            pointer-events: none;
+            transform: scale(0.95);
+            min-width: 200px;
+        }
+
+        .confirm-btn.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        .confirm-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .confirm-btn:hover::before {
+            left: 100%;
+        }
+
+        .confirm-btn:focus,
+        .confirm-btn:hover {
+            transform: translateY(-6px) scale(1.05);
+            box-shadow: 0 15px 50px rgba(var(--primary-rgb), 0.4), 0 8px 25px rgba(var(--primary-rgb), 0.3);
+        }
+
+        .confirm-btn:active {
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        /* Enhanced Responsive Design */
+        @media (max-width: 1024px) {
+            .layout-container {
+                max-width: 95%;
+                margin: 1.5rem auto;
+                padding: 2.5rem 1.5rem;
+            }
+
+            .layout-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .layout-container {
+                margin: 1rem auto;
+                padding: 2rem 1rem;
+                border-radius: 20px;
+            }
+
+            .layout-title {
+                font-size: 2.5rem;
+                margin-bottom: 2rem;
+                letter-spacing: -1px;
+            }
+
+            .layout-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            .layout-option {
+                padding: 1.5rem;
+                border-radius: 16px;
+            }
+
+            .layout-preview {
+                width: 120px;
+                height: 160px;
+            }
+
+            .confirm-btn {
+                padding: 0.875rem 2rem;
+                font-size: 1rem;
+                min-width: 180px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                background: linear-gradient(135deg, var(--accent) 0%, var(--secondary) 50%, var(--tertiary) 100%);
+                background-attachment: fixed;
+            }
+
+            .layout-container {
+                margin: 0.5rem;
+                padding: 1.5rem 1rem;
+                border-radius: 16px;
+            }
+
+            .layout-title {
+                font-size: 2rem;
+                margin-bottom: 1.5rem;
+                letter-spacing: -0.5px;
+            }
+
+            .layout-option {
+                padding: 1.25rem;
+                gap: 1rem;
+            }
+
+            .layout-preview {
+                width: 100px;
+                height: 140px;
+            }
+
+            .layout-name {
+                font-size: 1.125rem;
+            }
+
+            .layout-description {
+                font-size: 0.875rem;
+                line-height: 1.4;
+            }
+
+            .confirm-btn {
+                padding: 0.75rem 1.5rem;
+                font-size: 0.95rem;
+                min-width: 160px;
+                border-radius: 12px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .layout-title {
+                font-size: 1.75rem;
+            }
+
+            .layout-preview {
+                width: 90px;
+                height: 125px;
+            }
+
+            .layout-option {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+    
+    <main>
+        <div class="layout-container">
+            <h1 class="layout-title" data-translate="choose_layout">Chọn Bố Cục</h1>
+            
+            <div class="layout-grid">
+                <!-- Layout Option 1: 2-Frame Vertical Strip -->
+                <div class="layout-option" data-layout="layout_strip_2" role="button" tabindex="0" aria-label="Bố cục 2 ảnh dọc">
+                    <div class="layout-preview">
+                        <div class="layout-frames">
+                            <div class="layout-frame"></div>
+                            <div class="layout-frame"></div>
+                        </div>
+                        <div class="layout-footer">Blubooth</div>
+                    </div>
+                    <div class="layout-name" data-translate="layout_2_name">2 Ảnh Dọc</div>
+                    <div class="layout-description" data-translate="layout_2_desc">Khổ in 4x6 inch - Hai ảnh dọc với kích thước 4x2.75 inch</div>
+                </div>
+
+                <!-- Layout Option 2: 3-Frame Vertical Strip -->
+                <div class="layout-option" data-layout="layout_strip_3" role="button" tabindex="0" aria-label="Bố cục 3 ảnh dọc">
+                    <div class="layout-preview">
+                        <div class="layout-frames">
+                            <div class="layout-frame"></div>
+                            <div class="layout-frame"></div>
+                            <div class="layout-frame"></div>
+                        </div>
+                        <div class="layout-footer">Blubooth</div>
+                    </div>
+                    <div class="layout-name" data-translate="layout_3_name">3 Ảnh Dọc</div>
+                    <div class="layout-description" data-translate="layout_3_desc">Khổ in 2.5x7 inch - Ba ảnh dọc với kích thước 2.5x2.17 inch</div>
+                </div>
+
+                <!-- Layout Option 3: 4-Frame Vertical Strip -->
+                <div class="layout-option" data-layout="layout_strip_4" role="button" tabindex="0" aria-label="Bố cục 4 ảnh dọc">
+                    <div class="layout-preview">
+                        <div class="layout-frames">
+                            <div class="layout-frame"></div>
+                            <div class="layout-frame"></div>
+                            <div class="layout-frame"></div>
+                            <div class="layout-frame"></div>
+                        </div>
+                        <div class="layout-footer">Blubooth</div>
+                    </div>
+                    <div class="layout-name" data-translate="layout_4_name">4 Ảnh Dọc</div>
+                    <div class="layout-description" data-translate="layout_4_desc">Khổ in 2x6 inch - Bốn ảnh dọc với kích thước 2x1.4 inch</div>
+                </div>
+            </div>
+
+            <button class="confirm-btn" id="confirmBtn" data-translate="continue_btn">Tiếp Tục</button>
+        </div>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="../scripts/layout-loader.js" defer></script>
+    <script>
+        // Layout selection functionality
+        let selectedLayout = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const layoutOptions = document.querySelectorAll('.layout-option');
+            const confirmBtn = document.getElementById('confirmBtn');
+            
+            // Handle layout selection
+            layoutOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remove previous selection
+                    layoutOptions.forEach(opt => opt.classList.remove('selected'));
+                    
+                    // Add selection to clicked option
+                    this.classList.add('selected');
+                    
+                    // Store selected layout
+                    selectedLayout = this.getAttribute('data-layout');
+                    
+                    // Enable confirm button
+                    confirmBtn.classList.add('active');
+                });
+                
+                // Handle keyboard navigation
+                option.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.click();
+                    }
+                });
+            });
+            
+            // Handle confirm button
+            confirmBtn.addEventListener('click', function() {
+                if (selectedLayout) {
+                    // Store selected layout in localStorage
+                    localStorage.setItem('selectedLayout', selectedLayout);
+                    
+                    // Navigate to canvas page
+                    window.location.href = 'canvas.html';
+                }
+            });
+            
+            // Load translation script after header is loaded
+            const checkHeader = setInterval(() => {
+                const langBtns = document.querySelectorAll('.lang-btn');
+                if (langBtns.length > 0) {
+                    clearInterval(checkHeader);
+                    const script = document.createElement('script');
+                    script.src = '../scripts/translation.js';
+                    script.onload = function() {
+                        langBtns.forEach(btn => {
+                            btn.onclick = function() {
+                                const lang = btn.getAttribute('data-lang');
+                                if (typeof setLanguage === 'function') setLanguage(lang);
+                            };
+                        });
+                        const savedLang = localStorage.getItem('blubooth_lang') || 'vi';
+                        if (typeof setLanguage === 'function') setLanguage(savedLang);
+                    };
+                    document.body.appendChild(script);
+                }
+            }, 30);
+            
+            // Mobile navigation toggle
+            const checkNav = setInterval(() => {
+                const navToggle = document.getElementById('navToggle');
+                const navbar = document.getElementById('navbar');
+                if (navToggle && navbar) {
+                    clearInterval(checkNav);
+                    navToggle.addEventListener('click', function () {
+                        navbar.classList.toggle('open');
+                        navToggle.setAttribute('aria-expanded', navbar.classList.contains('open'));
+                    });
+                    navToggle.addEventListener('blur', function () {
+                        setTimeout(() => {
+                            navbar.classList.remove('open');
+                            navToggle.setAttribute('aria-expanded', 'false');
+                        }, 240);
+                    });
+                }
+            }, 30);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Blubooth | Về chúng tôi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Font được import từ styles.css -->
+  <!-- Import CSS chính -->
+  <link rel="stylesheet" href="../styles/styles.css">
+  <style>
+    /* Các style riêng cho trang About */
+    .about-section {
+      text-align: center;
+      padding: 2rem 0;
+    }
+
+    .about-section h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.2px;
+    }
+
+    .about-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2.5rem;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: left;
+    }
+
+    .about-text-block {
+      background: var(--pastel-beige);
+      border-radius: var(--radius-main);
+      padding: 2rem 2.5rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+      line-height: 1.7;
+      color: #222;
+      font-size: 1.1rem;
+      transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+      width: 100%;
+    }
+
+    .about-text-block:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    }
+
+    .about-text-block h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 0.8rem;
+    }
+
+    .about-text-block p {
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 768px) {
+      .about-section h1 {
+        font-size: 1.8rem;
+      }
+      .about-content {
+        gap: 1.8rem;
+      }
+      .about-text-block {
+        padding: 1.5rem 1.8rem;
+        font-size: 0.95rem;
+      }
+      .about-text-block h2 {
+        font-size: 1.4rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .about-section h1 {
+        font-size: 1.5rem;
+      }
+      .about-text-block {
+        padding: 1rem 1.2rem;
+        font-size: 0.9rem;
+      }
+      .about-text-block h2 {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="header-placeholder"></div>
+  <main>
+    <div class="content-container">
+      <section class="about-section">
+        <h1 data-translate="about_title">Về Chúng Tôi</h1>
+        <div class="about-content">
+          <div class="about-text-block">
+            <h2 data-translate="about_mission_title">Sứ mệnh của chúng tôi</h2>
+            <p data-translate="about_mission_text">Chúng tôi mang đến những trải nghiệm chụp ảnh độc đáo và thú vị, giúp bạn lưu giữ những khoảnh khắc đẹp nhất trong cuộc sống. Với công nghệ hiện đại và giao diện thân thiện, chúng tôi cam kết tạo ra những bức ảnh chất lượng cao mà bạn sẽ trân trọng mãi mãi.</p>
+            
+            <p data-translate="about_vision_text">Trở thành nền tảng chụp ảnh trực tuyến hàng đầu, nơi mọi người có thể dễ dàng tạo ra những tác phẩm nghệ thuật từ những khoảnh khắc thường ngày. Chúng tôi hướng tới việc kết nối con người thông qua những hình ảnh đầy cảm xúc.</p>
+            
+            <p data-translate="about_values_text">Chất lượng, sáng tạo và trải nghiệm người dùng là ba trụ cột chính trong mọi sản phẩm của chúng tôi. Chúng tôi tin rằng công nghệ phải phục vụ con người, và mỗi tính năng được phát triển đều hướng tới việc mang lại niềm vui và sự hài lòng cho người dùng.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <div id="footer-placeholder"></div>
+  <script src="../scripts/layout-loader.js" defer></script>
+  <script>
+    // Đảm bảo translation.js chỉ chạy sau khi header đã load xong
+    window.addEventListener('DOMContentLoaded', function() {
+      // Đợi header/footer được inject xong
+      const checkHeader = setInterval(() => {
+        const langBtns = document.querySelectorAll('.lang-btn');
+        if (langBtns.length > 0) {
+          clearInterval(checkHeader);
+          // Nạp translation.js động
+          const script = document.createElement('script');
+          script.src = '../scripts/translation.js';
+          script.onload = function() {
+            // Gắn lại sự kiện click cho nút ngôn ngữ (nếu translation.js chưa tự gắn)
+            langBtns.forEach(btn => {
+              btn.onclick = function() {
+                const lang = btn.getAttribute('data-lang');
+                if (typeof setLanguage === 'function') setLanguage(lang);
+              };
+            });
+            // Áp dụng lại ngôn ngữ đã lưu
+            const savedLang = localStorage.getItem('blubooth_lang') || 'vi';
+            if (typeof setLanguage === 'function') setLanguage(savedLang);
+          };
+          document.body.appendChild(script);
+        }
+      }, 30);
+
+      // Hamburger toggle cho mobile nav
+      const checkNav = setInterval(() => {
+        const navToggle = document.getElementById('navToggle');
+        const navbar = document.getElementById('navbar');
+        if (navToggle && navbar) {
+          clearInterval(checkNav);
+          navToggle.addEventListener('click', function () {
+            navbar.classList.toggle('open');
+            navToggle.setAttribute('aria-expanded', navbar.classList.contains('open'));
+          });
+          // Fix: Close nav on blur only if it's open to prevent immediate close on click
+          navToggle.addEventListener('blur', function () {
+            setTimeout(() => {
+              if (navbar.classList.contains('open')) {
+                navbar.classList.remove('open');
+                navToggle.setAttribute('aria-expanded', 'false');
+              }
+            }, 240); // Small delay to allow click event to register
+          });
+        }
+      }, 30);
+    });
+  </script>
+</body>
+</html>

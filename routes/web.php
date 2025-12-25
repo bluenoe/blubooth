@@ -28,13 +28,31 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__ . '/auth.php';
 
-Route::get('/booth', [BoothController::class, 'index'])
-    ->middleware(['auth', 'verified'])
-    ->name('booth');
-Route::post('/booth/save', [BoothController::class, 'store'])->name('booth.store');
+// Booth Routes - Strict flow: Select → Capture → Customize
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Entry point - redirects to select
+    Route::get('/booth', function () {
+        return redirect()->route('booth.select');
+    })->name('booth');
 
-// Gallery routes
-Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
-Route::delete('/gallery/{id}', [GalleryController::class, 'destroy'])->name('gallery.destroy');
+    // Step 1: Layout Selection (Entry Point)
+    Route::get('/booth/select', [BoothController::class, 'selectLayout'])->name('booth.select');
 
-Route::get('/booth/layout', [BoothController::class, 'selectLayout'])->name('booth.select');
+    // Step 2: Capture Session
+    Route::get('/booth/capture', [BoothController::class, 'capture'])->name('booth.capture');
+
+    // Step 3: Customize & Review (The Darkroom)
+    Route::get('/booth/customize', [BoothController::class, 'customize'])->name('booth.customize');
+
+    // Save captured photo
+    Route::post('/booth/save', [BoothController::class, 'store'])->name('booth.store');
+
+    // Save final strip to gallery
+    Route::post('/booth/export', [BoothController::class, 'export'])->name('booth.export');
+});
+
+// Gallery routes - Auth protected
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
+    Route::delete('/gallery/{id}', [GalleryController::class, 'destroy'])->name('gallery.destroy');
+});

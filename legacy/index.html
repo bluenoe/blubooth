@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Blubooth</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../styles/shared-components.css">
+  <link rel="stylesheet" href="../styles/styles.css">
+  <style>
+    body {
+      background-color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* Main Content Area with Enhanced Glow Effect */
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px 80px 20px;
+      position: relative;
+      background: #ffffff;
+      min-height: calc(100vh - 200px);
+    }
+
+    main::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(ellipse at center, 
+        #8DBCC7 0%, 
+        rgba(141, 188, 199, 0.8) 25%, 
+        rgba(196, 225, 230, 0.5) 50%, 
+        rgba(196, 225, 230, 0.2) 75%, 
+        transparent 100%);
+      border-radius: 50%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Khung chính chứa tất cả */
+    .container {
+      position: relative;
+      width: 85%;
+      max-width: 600px;
+      text-align: center;
+      z-index: 2;
+      margin: 0 auto;
+    }
+    
+    /* Hide photo container on desktop, show desktop positioned images */
+    .photo-container {
+      display: none;
+    }
+    
+    .desktop-only {
+      display: block;
+    }
+
+    /* Nội dung chính */
+    .main-content h1 {
+      font-size: 4rem;
+      color: #333;
+      margin: 10px 0;
+      font-weight: bold;
+      animation: floatingGently 3.5s ease-in-out infinite;
+    }
+
+    /* Animation keyframes - Gentle floating effect */
+    @keyframes floatingGently {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-12px);
+      }
+    }
+
+    .main-content .tagline {
+      color: #666;
+      font-size: 1.2rem;
+      margin: 20px 0;
+    }
+
+    .start-button {
+      background-color: #8DBCC7;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 25px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      margin-top: 30px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+      font-weight: bold;
+    }
+
+    .start-button:hover {
+      background-color: #6BA5B1;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Style chung cho các dải ảnh */
+    .photo-strip {
+      position: absolute;
+      width: 200px;
+      height: auto;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+      border-radius: 12px;
+      border: 5px solid white;
+      transition: all 0.3s ease;
+      z-index: 1;
+    }
+
+    .photo-strip:hover {
+      transform: scale(1.1) !important;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Ảnh bên trái 1 (nằm dưới) */
+    .left-1 {
+      top: 20px;
+      left: -100px;
+      transform: rotate(-12deg);
+      z-index: 1;
+    }
+
+    /* Ảnh bên trái 2 (nằm trên) */
+    .left-2 {
+      top: 0px;
+      left: -280px;
+      transform: rotate(-20deg);
+      z-index: 1;
+    }
+
+    /* Ảnh bên phải 1 (nằm dưới) */
+    .right-1 {
+      top: 20px;
+      right: -100px;
+      transform: rotate(12deg);
+      z-index: 1;
+    }
+
+    /* Ảnh bên phải 2 (nằm trên) */
+    .right-2 {
+      top: 0px;
+      right: -280px;
+      transform: rotate(20deg);
+      z-index: 1;
+    }
+
+    /* Responsive cho tablet */
+    @media (max-width: 1024px) {
+      .container {
+        width: 90%;
+        max-width: 650px;
+      }
+      
+      .photo-strip {
+        width: 180px;
+      }
+      
+      .left-1 {
+        left: -90px;
+      }
+      
+      .left-2 {
+        left: -250px;
+      }
+      
+      .right-1 {
+        right: -90px;
+      }
+      
+      .right-2 {
+        right: -250px;
+      }
+    }
+    
+    /* Responsive cho mobile */
+    @media (max-width: 768px) {
+      main {
+        padding: 30px 15px 70px 15px;
+        min-height: calc(100vh - 180px);
+      }
+      
+      /* Hide navigation links and show hamburger menu */
+      nav {
+        display: none;
+      }
+      
+      .header-hamburger {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        color: #8DBCC7;
+        font-size: 1.8rem;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+      }
+      
+      .header-hamburger:hover {
+        background: rgba(141, 188, 199, 0.1);
+        transform: scale(1.1);
+      }
+      
+      /* Hide desktop positioned images and show photo container */
+       .desktop-only {
+         display: none;
+       }
+       
+       .photo-container {
+         display: flex;
+         flex-wrap: wrap;
+         justify-content: center;
+         gap: 15px;
+         margin-bottom: 30px;
+         order: -1;
+       }
+       
+       /* Rearrange photo strips - stack them vertically above main content */
+       .container {
+         flex-direction: column;
+         align-items: center;
+       }
+       
+       .photo-container .photo-strip {
+         position: static;
+         width: 160px;
+         margin: 5px;
+         transform: none !important;
+         z-index: auto;
+         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+       }
+
+      .main-content h1 {
+        font-size: 2.5rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      main {
+        padding: 20px 15px 60px 15px;
+        min-height: calc(100vh - 160px);
+      }
+      
+      .container {
+        width: 95%;
+        max-width: none;
+      }
+      
+      .photo-strip {
+        width: 100px;
+      }
+      
+      .left-1 {
+        left: -60px;
+        top: 30px;
+      }
+      
+      .left-2 {
+        left: -140px;
+        top: 10px;
+      }
+      
+      .right-1 {
+        right: -60px;
+        top: 30px;
+      }
+      
+      .right-2 {
+        right: -140px;
+        top: 10px;
+      }
+
+      .main-content h1 {
+        font-size: 2rem;
+      }
+
+      .start-button {
+        padding: 12px 25px;
+        font-size: 1rem;
+      }
+    }
+
+  </style>
+</head>
+<body data-auto-load-templates>
+  <div id="header-placeholder"></div>
+  
+  <main>
+    <div class="container">
+    <!-- Photo container for mobile view -->
+    <div class="photo-container">
+      <img src="../assets/layouts/Blubooth.png" alt="Photo strip left 1" class="photo-strip left-1">
+      <img src="../assets/layouts/Blubooth2.png" alt="Photo strip left 2" class="photo-strip left-2">
+      <img src="../assets/layouts/Blubooth3.png" alt="Photo strip right 1" class="photo-strip right-1">
+      <img src="../assets/layouts/Blubooth4.png" alt="Photo strip right 2" class="photo-strip right-2">
+    </div>
+    
+    <!-- Desktop positioned images -->
+    <img src="../assets/layouts/Blubooth.png" alt="Photo strip left 1" class="photo-strip left-1 desktop-only">
+    <img src="../assets/layouts/Blubooth2.png" alt="Photo strip left 2" class="photo-strip left-2 desktop-only">
+
+    <div class="main-content">
+      <h1 data-translate="logo_text">blubooth</h1>
+      <p class="tagline" data-translate="main_desc">Capture the moment, cherish the magic</p>
+      <a href="chooseLayout.html" class="start-button" data-translate="start_btn">START</a>
+    </div>
+
+    <img src="../assets/layouts/Blubooth3.png" alt="Photo strip right 1" class="photo-strip right-1 desktop-only">
+    <img src="../assets/layouts/Blubooth4.png" alt="Photo strip right 2" class="photo-strip right-2 desktop-only">
+    </div>
+  </main>
+  
+
+  
+  <div id="footer-placeholder"></div>
+  <script src="../scripts/layout-loader.js" defer></script>
+  <script>
+    // Đảm bảo translation.js chỉ chạy sau khi header đã load xong
+    window.addEventListener('DOMContentLoaded', function() {
+      // Đợi header/footer được inject xong
+      const checkHeader = setInterval(() => {
+        const langBtns = document.querySelectorAll('.lang-btn');
+        if (langBtns.length > 0) {
+          clearInterval(checkHeader);
+          // Nạp translation.js động
+          const script = document.createElement('script');
+          script.src = '../scripts/translation.js';
+          script.onload = function() {
+            // Gắn lại sự kiện click cho nút ngôn ngữ (nếu translation.js chưa tự gắn)
+            langBtns.forEach(btn => {
+              btn.onclick = function() {
+                const lang = btn.getAttribute('data-lang');
+                if (typeof setLanguage === 'function') setLanguage(lang);
+              };
+            });
+            // Áp dụng lại ngôn ngữ đã lưu
+            const savedLang = localStorage.getItem('blubooth_lang') || 'vi';
+            if (typeof setLanguage === 'function') setLanguage(savedLang);
+          };
+          document.body.appendChild(script);
+        }
+      }, 30);
+
+      // Hamburger toggle cho mobile nav
+      const checkNav = setInterval(() => {
+        const navToggle = document.getElementById('navToggle');
+        const navbar = document.getElementById('navbar');
+        if (navToggle && navbar) {
+          clearInterval(checkNav);
+          navToggle.addEventListener('click', function () {
+            navbar.classList.toggle('open');
+            navToggle.setAttribute('aria-expanded', navbar.classList.contains('open'));
+          });
+          navToggle.addEventListener('blur', function () {
+            setTimeout(() => {
+              if (navbar.classList.contains('open')) {
+                navbar.classList.remove('open');
+                navToggle.setAttribute('aria-expanded', 'false');
+              }
+            }, 240);
+          });
+        }
+      }, 30);
+    });
+  </script>
+</body>
+</html>

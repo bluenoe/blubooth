@@ -2,26 +2,19 @@ import { Head, router } from '@inertiajs/react';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, RefreshCw, ArrowRight, Check, FlipHorizontal, Timer, Aperture } from 'lucide-react';
-import NavBar from '@/Components/NavBar';
 
-export default function Booth({ auth }) {
+export default function Capture({ auth }) {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const [stream, setStream] = useState(null);
-    const [isCameraFlipped, setIsCameraFlipped] = useState(true); // Mirrored by default
+    const [isCameraFlipped, setIsCameraFlipped] = useState(true);
+    const [isReady, setIsReady] = useState(false);
 
-    // Layout configuration from localStorage
-    const [layoutConfig] = useState(() => {
-        if (typeof window !== 'undefined') {
-            // Try new key first, then fallback to old key
-            const saved = localStorage.getItem('blu_layout_config') || localStorage.getItem('blu_session_layout');
-            return saved ? JSON.parse(saved) : { key: 'strip_4', frames: 4, name: 'Cinema' };
-        }
-        return { key: 'strip_4', frames: 4, name: 'Cinema' };
-    });
+    // Layout configuration - MUST exist or redirect
+    const [layoutConfig, setLayoutConfig] = useState(null);
 
-    // Photo state
-    const [photos, setPhotos] = useState(Array(layoutConfig.frames).fill(null));
+    // Photo state - initialized after config is loaded
+    const [photos, setPhotos] = useState([]);
     const [activeFrameIndex, setActiveFrameIndex] = useState(0);
 
     // Camera effects state
@@ -30,8 +23,40 @@ export default function Booth({ auth }) {
     const [countdownDuration, setCountdownDuration] = useState(3);
     const [isCapturing, setIsCapturing] = useState(false);
 
-    // Initialize camera
+    // Step 1: Validate layout config exists - redirect if not
     useEffect(() => {
+        const savedConfig = localStorage.getItem('blu_layout_config');
+
+        if (!savedConfig) {
+            // No config found - redirect to selection page
+            console.warn('No layout config found, redirecting to selection...');
+            router.visit(route('booth.select'));
+            return;
+        }
+
+        try {
+            const config = JSON.parse(savedConfig);
+
+            // Validate config structure
+            if (!config.frames || config.frames < 2 || config.frames > 4) {
+                throw new Error('Invalid frame count');
+            }
+
+            setLayoutConfig(config);
+            // Initialize photos array with EXACTLY the number of frames from config
+            setPhotos(Array(config.frames).fill(null));
+            setIsReady(true);
+        } catch (error) {
+            console.error('Invalid layout config:', error);
+            localStorage.removeItem('blu_layout_config');
+            router.visit(route('booth.select'));
+        }
+    }, []);
+
+    // Step 2: Initialize camera after config is ready
+    useEffect(() => {
+        if (!isReady) return;
+
         let mediaStream = null;
 
         const startCamera = async () => {
@@ -62,7 +87,7 @@ export default function Booth({ auth }) {
                 mediaStream.getTracks().forEach(track => track.stop());
             }
         };
-    }, []);
+    }, [isReady]);
 
     // Countdown logic
     const startCountdown = useCallback(() => {
@@ -91,9 +116,8 @@ export default function Booth({ auth }) {
 
     // Capture photo
     const capturePhoto = useCallback(async () => {
-        if (activeFrameIndex === -1 || isCapturing) return;
+        if (!layoutConfig || activeFrameIndex === -1 || isCapturing) return;
 
-        // Start countdown
         await startCountdown();
 
         // Flash effect
@@ -108,7 +132,6 @@ export default function Booth({ auth }) {
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
 
-            // Mirror image if camera is flipped
             if (isCameraFlipped) {
                 ctx.translate(canvas.width, 0);
                 ctx.scale(-1, 1);
@@ -123,43 +146,60 @@ export default function Booth({ auth }) {
             newPhotos[activeFrameIndex] = imageSrc;
             setPhotos(newPhotos);
 
-            // Save to localStorage for persistence
+            // Save to localStorage
             localStorage.setItem('blu_captured_photos', JSON.stringify(newPhotos));
 
-            // Auto-advance to next empty slot
+            // Auto-advance logic - respect the frame limit
             const nextEmptyIndex = newPhotos.findIndex(p => p === null);
             if (nextEmptyIndex !== -1) {
                 setActiveFrameIndex(nextEmptyIndex);
             } else {
-                setActiveFrameIndex(-1); // All frames captured
+                // All frames captured! Stop capturing
+                setActiveFrameIndex(-1);
             }
         }
 
         setIsCapturing(false);
-    }, [activeFrameIndex, isCapturing, isCameraFlipped, photos, startCountdown]);
+    }, [layoutConfig, activeFrameIndex, isCapturing, isCameraFlipped, photos, startCountdown]);
 
-    // Handle frame click (for retake)
+    // Handle frame click for retake
     const handleFrameClick = (index) => {
         setActiveFrameIndex(index);
     };
 
-    // Finish session
+    // Finish session - go to customize page
     const handleFinish = () => {
         if (photos.includes(null)) {
             if (!confirm('You haven\'t captured all frames. Continue anyway?')) return;
         }
 
-        // Save final photos to localStorage
+        // Save final photos
         localStorage.setItem('blu_captured_photos', JSON.stringify(photos));
         localStorage.setItem('blu_capture_time', new Date().toISOString());
 
-        router.visit('/gallery');
+        // Navigate to The Darkroom (customize page)
+        router.visit(route('booth.customize'));
     };
 
     // Toggle camera flip
     const toggleFlip = () => {
         setIsCameraFlipped(prev => !prev);
     };
+
+    // Loading state while checking config
+    if (!isReady || !layoutConfig) {
+        return (
+            <div className="min-h-screen bg-neutral-900 flex items-center justify-center">
+                <motion.div
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="text-white text-sm uppercase tracking-widest"
+                >
+                    Loading...
+                </motion.div>
+            </div>
+        );
+    }
 
     const isFull = !photos.includes(null);
     const capturedCount = photos.filter(p => p !== null).length;
@@ -168,7 +208,6 @@ export default function Booth({ auth }) {
         <>
             <Head title="Capture Session" />
 
-            {/* Font Import */}
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
             `}</style>
@@ -178,20 +217,24 @@ export default function Booth({ auth }) {
                 {/* LEFT: Live Camera Section */}
                 <div className="flex-1 relative flex flex-col items-center justify-center p-6 bg-black">
 
-                    {/* Header */}
+                    {/* Header with Step Indicator */}
                     <div className="absolute top-6 left-6 z-20">
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className="w-6 h-6 bg-white text-black text-[10px] font-bold flex items-center justify-center rounded-full">2</span>
+                            <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-neutral-400">Capture</span>
+                        </div>
                         <h1 className="text-2xl font-bold tracking-tighter uppercase">
                             Blu<span className="font-serif italic font-normal text-neutral-400">Booth.</span>
                         </h1>
                         <p className="text-[10px] uppercase tracking-widest text-neutral-500 mt-1">
-                            Session: {layoutConfig.name}
+                            Session: {layoutConfig.name} • {layoutConfig.frames} Frames
                         </p>
                     </div>
 
                     {/* Camera Viewport */}
                     <div className="relative w-full max-w-4xl aspect-video bg-neutral-800 rounded-sm overflow-hidden shadow-2xl ring-1 ring-neutral-700">
 
-                        {/* Flash Effect Overlay */}
+                        {/* Flash Effect */}
                         <AnimatePresence>
                             {isFlashing && (
                                 <motion.div
@@ -226,7 +269,7 @@ export default function Booth({ auth }) {
                             )}
                         </AnimatePresence>
 
-                        {/* Live Recording Indicator */}
+                        {/* Live Indicator */}
                         <div className="absolute top-4 right-4 z-10">
                             <motion.span
                                 animate={{ opacity: [1, 0.5, 1] }}
@@ -319,13 +362,13 @@ export default function Booth({ auth }) {
                     <p className="mt-6 text-neutral-500 text-xs uppercase tracking-widest font-bold">
                         {activeFrameIndex !== -1
                             ? `Capturing Frame ${activeFrameIndex + 1} of ${layoutConfig.frames}`
-                            : 'All frames captured'}
+                            : `All ${layoutConfig.frames} frames captured`}
                     </p>
 
                     <canvas ref={canvasRef} className="hidden" />
                 </div>
 
-                {/* RIGHT: Film Strip Sidebar */}
+                {/* RIGHT: Film Strip Sidebar - DYNAMIC based on layoutConfig */}
                 <div className="w-full md:w-80 lg:w-96 bg-white text-neutral-900 border-l border-neutral-200 p-6 flex flex-col h-[35vh] md:h-screen overflow-y-auto">
 
                     <div className="mb-6 flex justify-between items-end">
@@ -335,19 +378,25 @@ export default function Booth({ auth }) {
                         </span>
                     </div>
 
-                    {/* Photo Frames */}
+                    {/* Dynamic Photo Frames - EXACTLY layoutConfig.frames slots */}
                     <div className="flex-1 space-y-4">
                         {photos.map((imgSrc, index) => (
                             <motion.div
                                 key={index}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.1 }}
                                 onClick={() => handleFrameClick(index)}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 className={`
-                                    relative aspect-[3/2] w-full bg-neutral-100 cursor-pointer overflow-hidden transition-all duration-300 group
+                                    relative aspect-[3/2] w-full cursor-pointer overflow-hidden transition-all duration-300 group
+                                    ${imgSrc
+                                        ? 'bg-neutral-100'
+                                        : 'bg-neutral-50 border-2 border-dashed border-neutral-200'}
                                     ${activeFrameIndex === index
                                         ? 'ring-2 ring-offset-2 ring-black shadow-xl scale-[1.02] z-10'
-                                        : 'hover:shadow-md border border-neutral-200'}
+                                        : 'hover:shadow-md'}
                                 `}
                             >
                                 {imgSrc ? (
@@ -373,12 +422,16 @@ export default function Booth({ auth }) {
                                 </div>
 
                                 {/* Active Indicator */}
-                                {activeFrameIndex === index && (
-                                    <motion.div
-                                        layoutId="activeIndicator"
-                                        className="absolute bottom-2 right-2 w-2 h-2 bg-green-500 rounded-full"
-                                    />
-                                )}
+                                <AnimatePresence>
+                                    {activeFrameIndex === index && (
+                                        <motion.div
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            exit={{ scale: 0 }}
+                                            className="absolute bottom-2 right-2 w-2 h-2 bg-green-500 rounded-full"
+                                        />
+                                    )}
+                                </AnimatePresence>
                             </motion.div>
                         ))}
                     </div>
