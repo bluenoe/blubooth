@@ -110,27 +110,48 @@ export default function Customize({ auth }) {
         return canvas.toDataURL('image/jpeg', 0.95);
     };
 
-    // Save to server using Inertia router (handles CSRF automatically)
-    const saveToServer = (dataUrl) => {
-        return new Promise((resolve) => {
-            router.post(route('booth.export'), { image: dataUrl }, {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: () => {
-                    resolve({ success: true });
+    // Save to server using fetch (more reliable for async flow)
+    const saveToServer = async (dataUrl) => {
+        try {
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                return { success: false, error: 'Session expired - please refresh' };
+            }
+
+            const response = await fetch(route('booth.export'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
-                onError: (errors) => {
-                    console.error('Save errors:', errors);
-                    // Check for specific error types
-                    const errorMsg = errors?.image || errors?.message || 'Could not save to archive';
-                    resolve({ success: false, error: errorMsg });
-                },
-                onFinish: () => {
-                    // Called after success or error
-                }
+                body: JSON.stringify({ image: dataUrl }),
+                credentials: 'same-origin',
             });
-        });
+
+            if (response.ok || response.status === 302 || response.status === 303) {
+                // Success - photo was saved
+                return { success: true };
+            } else if (response.status === 419) {
+                // CSRF token mismatch
+                return { success: false, error: 'Session expired - please refresh page' };
+            } else if (response.status === 422) {
+                // Validation error
+                const data = await response.json().catch(() => ({}));
+                return { success: false, error: data.message || 'Validation failed' };
+            } else {
+                return { success: false, error: `Server error: ${response.status}` };
+            }
+        } catch (err) {
+            console.error('Save error:', err);
+            return { success: false, error: 'Network error - please try again' };
+        }
     };
+
 
     // Export with download
     const handleExport = async () => {
