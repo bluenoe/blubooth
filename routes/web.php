@@ -51,6 +51,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/booth/export', [BoothController::class, 'export'])->name('booth.export');
 });
 
-// Gallery routes
-Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
-Route::delete('/gallery/{id}', [GalleryController::class, 'destroy'])->name('gallery.destroy');
+// Gallery routes - Auth protected
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
+    Route::delete('/gallery/{id}', [GalleryController::class, 'destroy'])->name('gallery.destroy');
+});

@@ -113,16 +113,28 @@ export default function Customize({ auth }) {
     // Save to server helper
     const saveToServer = async (dataUrl) => {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-        const response = await fetch(route('booth.export'), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken || '',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({ image: dataUrl }),
-        });
-        return response.ok;
+        try {
+            const response = await fetch(route('booth.export'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ image: dataUrl }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Server error:', response.status, errorData);
+                return { success: false, error: errorData.message || `Server error: ${response.status}` };
+            }
+
+            return { success: true };
+        } catch (err) {
+            console.error('Network error:', err);
+            return { success: false, error: 'Network error - please try again' };
+        }
     };
 
     // Export with download
@@ -142,12 +154,13 @@ export default function Customize({ auth }) {
             link.click();
 
             // Save to server
-            const saved = await saveToServer(dataUrl);
-            if (saved) {
+            const result = await saveToServer(dataUrl);
+            if (result.success) {
                 setExportSuccess(true);
                 setTimeout(() => router.visit('/gallery'), 1500);
             } else {
-                // Download worked, server failed - still success
+                // Download worked, server failed - still show success but log error
+                console.warn('Server save failed:', result.error);
                 setExportSuccess(true);
             }
         } catch (error) {
@@ -167,17 +180,19 @@ export default function Customize({ auth }) {
 
         try {
             const dataUrl = await generateCanvas();
-            const saved = await saveToServer(dataUrl);
+            const result = await saveToServer(dataUrl);
 
-            if (saved) {
-                // Redirect immediately to gallery
+            if (result.success) {
                 router.visit('/gallery');
             } else {
-                setExportError('Could not save to archive');
+                setExportError(result.error || 'Could not save to archive');
+                // Auto-dismiss error after 4 seconds
+                setTimeout(() => setExportError(null), 4000);
             }
         } catch (error) {
             console.error('Finish error:', error);
             setExportError(error.message || 'Save failed');
+            setTimeout(() => setExportError(null), 4000);
         } finally {
             setIsFinishing(false);
         }
@@ -340,16 +355,21 @@ export default function Customize({ auth }) {
                         </div>
                     </motion.div>
 
-                    {/* Error Message */}
+                    {/* Error Toast - Bottom Right, Luxury Black Pill */}
                     <AnimatePresence>
                         {exportError && (
                             <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
-                                className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full text-xs font-bold shadow-lg"
+                                initial={{ opacity: 0, y: 20, x: 20 }}
+                                animate={{ opacity: 1, y: 0, x: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-black/90 backdrop-blur-sm text-white px-5 py-3 rounded-full shadow-2xl"
                             >
-                                {exportError}
+                                <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                                </svg>
+                                <span className="text-[10px] font-bold uppercase tracking-widest">
+                                    {exportError}
+                                </span>
                             </motion.div>
                         )}
                     </AnimatePresence>
