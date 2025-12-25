@@ -110,31 +110,26 @@ export default function Customize({ auth }) {
         return canvas.toDataURL('image/jpeg', 0.95);
     };
 
-    // Save to server helper
-    const saveToServer = async (dataUrl) => {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-        try {
-            const response = await fetch(route('booth.export'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken || '',
-                    'Accept': 'application/json',
+    // Save to server using Inertia router (handles CSRF automatically)
+    const saveToServer = (dataUrl) => {
+        return new Promise((resolve) => {
+            router.post(route('booth.export'), { image: dataUrl }, {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    resolve({ success: true });
                 },
-                body: JSON.stringify({ image: dataUrl }),
+                onError: (errors) => {
+                    console.error('Save errors:', errors);
+                    // Check for specific error types
+                    const errorMsg = errors?.image || errors?.message || 'Could not save to archive';
+                    resolve({ success: false, error: errorMsg });
+                },
+                onFinish: () => {
+                    // Called after success or error
+                }
             });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error('Server error:', response.status, errorData);
-                return { success: false, error: errorData.message || `Server error: ${response.status}` };
-            }
-
-            return { success: true };
-        } catch (err) {
-            console.error('Network error:', err);
-            return { success: false, error: 'Network error - please try again' };
-        }
+        });
     };
 
     // Export with download
@@ -147,13 +142,13 @@ export default function Customize({ auth }) {
         try {
             const dataUrl = await generateCanvas();
 
-            // Trigger download
+            // Trigger download first
             const link = document.createElement('a');
             link.download = `blubooth_strip_${Date.now()}.jpg`;
             link.href = dataUrl;
             link.click();
 
-            // Save to server
+            // Save to server using Inertia
             const result = await saveToServer(dataUrl);
             if (result.success) {
                 setExportSuccess(true);
@@ -183,10 +178,10 @@ export default function Customize({ auth }) {
             const result = await saveToServer(dataUrl);
 
             if (result.success) {
+                // Redirect to gallery
                 router.visit('/gallery');
             } else {
                 setExportError(result.error || 'Could not save to archive');
-                // Auto-dismiss error after 4 seconds
                 setTimeout(() => setExportError(null), 4000);
             }
         } catch (error) {
@@ -197,6 +192,7 @@ export default function Customize({ auth }) {
             setIsFinishing(false);
         }
     };
+
 
     // Loading state
     if (!isReady || !layoutConfig) {

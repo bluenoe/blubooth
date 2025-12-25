@@ -100,10 +100,8 @@ class BoothController extends Controller
             'type' => 'strip',
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Strip saved to your archive!',
-            'path' => 'photos/' . $imageName,
-        ]);
+        // Return redirect for Inertia compatibility
+        // The router.post onSuccess callback will fire after this
+        return redirect()->back();
     }
 }
