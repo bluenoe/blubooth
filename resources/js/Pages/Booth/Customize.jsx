@@ -170,11 +170,11 @@ export default function Customize({ auth }) {
     // Loading state
     if (!isReady || !layoutConfig) {
         return (
-            <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+            <div className="min-h-screen bg-white flex items-center justify-center">
                 <motion.div
                     animate={{ opacity: [0.5, 1, 0.5] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
-                    className="text-white text-sm uppercase tracking-widest"
+                    className="text-neutral-900 text-sm uppercase tracking-widest"
                 >
                     Loading...
                 </motion.div>
@@ -184,20 +184,20 @@ export default function Customize({ auth }) {
 
     return (
         <>
-            <Head title="The Darkroom" />
+            <Head title="Customize Your Strip" />
 
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
             `}</style>
 
-            <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-white selection:text-black flex flex-col">
+            <div className="min-h-screen bg-white text-neutral-900 font-sans selection:bg-black selection:text-white flex flex-col">
 
                 {/* Header */}
-                <div className="flex-shrink-0 px-6 py-4 flex items-center justify-between border-b border-neutral-800">
+                <div className="flex-shrink-0 px-6 py-4 flex items-center justify-between border-b border-neutral-100">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-3">
-                            <span className="w-6 h-6 bg-white text-black text-[10px] font-bold flex items-center justify-center rounded-full">3</span>
-                            <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-neutral-400">The Darkroom</span>
+                            <span className="w-6 h-6 bg-black text-white text-[10px] font-bold flex items-center justify-center rounded-full">3</span>
+                            <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-neutral-500">Customize</span>
                         </div>
                         <h1 className="text-xl font-bold tracking-tighter uppercase hidden md:block">
                             Blu<span className="font-serif italic font-normal text-neutral-400">Booth.</span>
@@ -209,7 +209,7 @@ export default function Customize({ auth }) {
                         <motion.button
                             onClick={() => router.visit('/gallery')}
                             whileHover={{ scale: 1.02 }}
-                            className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-white transition"
+                            className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-neutral-500 border border-neutral-200 rounded-full hover:border-black hover:text-neutral-900 transition-all"
                         >
                             Skip
                         </motion.button>
@@ -222,14 +222,14 @@ export default function Customize({ auth }) {
                             className={`
                                 px-6 py-2.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all
                                 ${isExporting || exportSuccess
-                                    ? 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
-                                    : 'bg-white text-black hover:bg-neutral-200'}
+                                    ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                                    : 'bg-black text-white hover:bg-neutral-800'}
                             `}
                         >
                             {isExporting ? (
                                 <>
                                     <Loader2 size={12} className="animate-spin" />
-                                    Developing...
+                                    Saving...
                                 </>
                             ) : exportSuccess ? (
                                 <>
@@ -247,29 +247,24 @@ export default function Customize({ auth }) {
                 </div>
 
                 {/* Main Content - Preview Canvas */}
-                <div className="flex-1 flex items-center justify-center p-8 relative overflow-hidden">
-
-                    {/* Background glow effect */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-96 h-96 bg-white/5 rounded-full blur-3xl" />
-                    </div>
+                <div className="flex-1 flex items-center justify-center p-8 relative overflow-hidden bg-neutral-50">
 
                     {/* The Strip to Capture */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5 }}
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
                         className="relative"
                     >
-                        {/* Shadow */}
-                        <div className="absolute -inset-8 bg-black/40 blur-3xl rounded-xl" />
-
                         {/* Capture Node - This is what html2canvas captures */}
                         <div
                             ref={captureRef}
                             id="capture-node"
-                            className="relative bg-white p-3"
-                            style={{ minWidth: '200px' }}
+                            className="relative bg-white p-3 shadow-2xl border border-neutral-200"
+                            style={{
+                                minWidth: '200px',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 12px 24px -8px rgba(0, 0, 0, 0.1)'
+                            }}
                         >
                             {/* Photos Stack */}
                             <div
@@ -279,7 +274,7 @@ export default function Customize({ auth }) {
                                 {photos.map((photo, index) => (
                                     <div
                                         key={index}
-                                        className="w-48 md:w-56 aspect-[4/3] overflow-hidden bg-neutral-200"
+                                        className="w-48 md:w-56 aspect-[4/3] overflow-hidden bg-neutral-100"
                                     >
                                         {photo && (
                                             <img
@@ -318,7 +313,7 @@ export default function Customize({ auth }) {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0 }}
-                                className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-full text-xs font-bold"
+                                className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full text-xs font-bold shadow-lg"
                             >
                                 {exportError}
                             </motion.div>
@@ -326,13 +321,13 @@ export default function Customize({ auth }) {
                     </AnimatePresence>
                 </div>
 
-                {/* Bottom Control Bar */}
-                <div className="flex-shrink-0 bg-neutral-900 border-t border-neutral-800 p-4">
+                {/* Bottom Control Bar - Glassmorphism */}
+                <div className="flex-shrink-0 bg-white/80 backdrop-blur-md border-t border-neutral-100 p-4">
 
                     {/* Filter Row */}
                     <div className="mb-4">
                         <div className="flex items-center gap-2 mb-3">
-                            <Sparkles size={12} className="text-neutral-500" />
+                            <Sparkles size={12} className="text-neutral-400" />
                             <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Filters</span>
                         </div>
                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -345,8 +340,8 @@ export default function Customize({ auth }) {
                                     className={`
                                         flex-shrink-0 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all
                                         ${selectedFilter === filter.id
-                                            ? 'bg-white text-black'
-                                            : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'}
+                                            ? 'bg-black text-white'
+                                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}
                                     `}
                                 >
                                     {filter.name}
@@ -358,7 +353,7 @@ export default function Customize({ auth }) {
                     {/* Frame Row */}
                     <div>
                         <div className="flex items-center gap-2 mb-3">
-                            <Image size={12} className="text-neutral-500" />
+                            <Image size={12} className="text-neutral-400" />
                             <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
                                 Frames ({availableFrames.length})
                             </span>
@@ -371,10 +366,10 @@ export default function Customize({ auth }) {
                                     whileHover={{ scale: 1.05, y: -2 }}
                                     whileTap={{ scale: 0.95 }}
                                     className={`
-                                        flex-shrink-0 relative w-16 h-20 rounded-lg overflow-hidden transition-all
+                                        flex-shrink-0 relative w-16 h-20 rounded-lg overflow-hidden transition-all bg-white
                                         ${selectedFrame === frame.id
-                                            ? 'ring-2 ring-white ring-offset-2 ring-offset-neutral-900'
-                                            : 'ring-1 ring-neutral-700 hover:ring-neutral-500'}
+                                            ? 'ring-2 ring-black ring-offset-2 ring-offset-white shadow-lg'
+                                            : 'ring-1 ring-neutral-200 hover:ring-neutral-400 hover:shadow-md'}
                                     `}
                                 >
                                     {frame.path ? (
@@ -384,8 +379,8 @@ export default function Customize({ auth }) {
                                             className="w-full h-full object-cover"
                                         />
                                     ) : (
-                                        <div className="w-full h-full bg-neutral-800 flex items-center justify-center">
-                                            <span className="text-[8px] text-neutral-500 uppercase">None</span>
+                                        <div className="w-full h-full bg-neutral-50 flex items-center justify-center">
+                                            <span className="text-[8px] text-neutral-400 uppercase">None</span>
                                         </div>
                                     )}
 
@@ -394,9 +389,9 @@ export default function Customize({ auth }) {
                                         <motion.div
                                             initial={{ scale: 0 }}
                                             animate={{ scale: 1 }}
-                                            className="absolute top-1 right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center"
+                                            className="absolute top-1 right-1 w-4 h-4 bg-black rounded-full flex items-center justify-center"
                                         >
-                                            <Check size={10} className="text-black" />
+                                            <Check size={10} className="text-white" />
                                         </motion.div>
                                     )}
                                 </motion.button>
