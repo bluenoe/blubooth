@@ -47,6 +47,7 @@ export default function Customize({ auth }) {
     const captureRef = useRef(null);
     const [isReady, setIsReady] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [isFinishing, setIsFinishing] = useState(false);
     const [exportSuccess, setExportSuccess] = useState(false);
     const [exportError, setExportError] = useState(null);
 
@@ -96,74 +97,89 @@ export default function Customize({ auth }) {
     const currentFrame = availableFrames.find(f => f.id === selectedFrame);
     const currentFilter = FILTERS.find(f => f.id === selectedFilter) || FILTERS[0];
 
-    // Export with html2canvas
-    const handleExport = async (saveToGallery = true) => {
-        if (!captureRef.current || isExporting) return;
+    // Generate canvas helper
+    const generateCanvas = async () => {
+        const canvas = await html2canvas(captureRef.current, {
+            useCORS: true,
+            allowTaint: true,
+            scale: 2,
+            backgroundColor: '#ffffff',
+            logging: false,
+            imageTimeout: 15000,
+        });
+        return canvas.toDataURL('image/jpeg', 0.95);
+    };
+
+    // Save to server helper
+    const saveToServer = async (dataUrl) => {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        const response = await fetch(route('booth.export'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken || '',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ image: dataUrl }),
+        });
+        return response.ok;
+    };
+
+    // Export with download
+    const handleExport = async () => {
+        if (!captureRef.current || isExporting || isFinishing) return;
 
         setIsExporting(true);
         setExportError(null);
 
         try {
-            console.log('Starting export...');
+            const dataUrl = await generateCanvas();
 
-            // Generate canvas from DOM element
-            const canvas = await html2canvas(captureRef.current, {
-                useCORS: true,
-                allowTaint: true,
-                scale: 2,
-                backgroundColor: '#ffffff',
-                logging: false,
-                imageTimeout: 15000,
-            });
-
-            console.log('Canvas generated:', canvas.width, 'x', canvas.height);
-
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-
-            // Trigger download first (always works)
+            // Trigger download
             const link = document.createElement('a');
             link.download = `blubooth_strip_${Date.now()}.jpg`;
             link.href = dataUrl;
             link.click();
 
-            if (saveToGallery) {
-                // Try to save to server
-                try {
-                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-
-                    const response = await fetch(route('booth.export'), {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken || '',
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({ image: dataUrl }),
-                    });
-
-                    if (response.ok) {
-                        setExportSuccess(true);
-                        setTimeout(() => {
-                            router.visit('/gallery');
-                        }, 1500);
-                    } else {
-                        console.warn('Server save failed, but download succeeded');
-                        setExportSuccess(true);
-                    }
-                } catch (serverError) {
-                    console.warn('Server save failed:', serverError);
-                    // Still show success since download worked
-                    setExportSuccess(true);
-                }
+            // Save to server
+            const saved = await saveToServer(dataUrl);
+            if (saved) {
+                setExportSuccess(true);
+                setTimeout(() => router.visit('/gallery'), 1500);
             } else {
+                // Download worked, server failed - still success
                 setExportSuccess(true);
             }
-
         } catch (error) {
             console.error('Export error:', error);
             setExportError(error.message || 'Export failed');
         } finally {
             setIsExporting(false);
+        }
+    };
+
+    // Finish without download - just save to gallery
+    const handleFinish = async () => {
+        if (!captureRef.current || isExporting || isFinishing) return;
+
+        setIsFinishing(true);
+        setExportError(null);
+
+        try {
+            const dataUrl = await generateCanvas();
+            const saved = await saveToServer(dataUrl);
+
+            if (saved) {
+                // Redirect immediately to gallery
+                router.visit('/gallery');
+            } else {
+                setExportError('Could not save to archive');
+            }
+        } catch (error) {
+            console.error('Finish error:', error);
+            setExportError(error.message || 'Save failed');
+        } finally {
+            setIsFinishing(false);
         }
     };
 
@@ -206,22 +222,40 @@ export default function Customize({ auth }) {
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-3">
+                        {/* Finish Button - Save without download */}
                         <motion.button
-                            onClick={() => router.visit('/gallery')}
-                            whileHover={{ scale: 1.02 }}
-                            className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-neutral-500 border border-neutral-200 rounded-full hover:border-black hover:text-neutral-900 transition-all"
+                            onClick={handleFinish}
+                            disabled={isFinishing || isExporting || exportSuccess}
+                            whileHover={!isFinishing ? { scale: 1.02 } : {}}
+                            className={`
+                                px-5 py-2.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest rounded-full border transition-all
+                                ${isFinishing
+                                    ? 'border-neutral-200 text-neutral-400 cursor-not-allowed'
+                                    : 'border-neutral-200 text-neutral-600 hover:border-black hover:text-neutral-900'}
+                            `}
                         >
-                            Skip
+                            {isFinishing ? (
+                                <>
+                                    <Loader2 size={12} className="animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <Save size={12} />
+                                    Finish
+                                </>
+                            )}
                         </motion.button>
 
+                        {/* Download Button - Save + Download */}
                         <motion.button
-                            onClick={() => handleExport(true)}
-                            disabled={isExporting || exportSuccess}
+                            onClick={handleExport}
+                            disabled={isExporting || isFinishing || exportSuccess}
                             whileHover={!isExporting ? { scale: 1.02 } : {}}
                             whileTap={!isExporting ? { scale: 0.98 } : {}}
                             className={`
                                 px-6 py-2.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all
-                                ${isExporting || exportSuccess
+                                ${isExporting || isFinishing || exportSuccess
                                     ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
                                     : 'bg-black text-white hover:bg-neutral-800'}
                             `}
@@ -239,7 +273,7 @@ export default function Customize({ auth }) {
                             ) : (
                                 <>
                                     <Download size={12} />
-                                    Save & Download
+                                    Download
                                 </>
                             )}
                         </motion.button>
